@@ -1,8 +1,12 @@
-// Reads one HR email with Claude and returns who it is about, which days, and what kind of absence.
-// Claude only extracts; the tool's own code decides what to change, using the confidence threshold.
+// Reads one HR email with an AI model and returns who it is about, which days, and what kind of absence.
+// The model only extracts; the tool's own code decides what to change, using the confidence threshold.
+//
+// Providers (config.json "ai.provider"):
+//   "nvidia"    NVIDIA's API (build.nvidia.com), OpenAI-style, for example nvidia/nemotron-3-ultra-550b-a55b
+//   "anthropic" Claude, through the Anthropic SDK
 import Anthropic from '@anthropic-ai/sdk';
 import type { Employee } from '../../../shared/types.ts';
-import { config } from '../config.ts';
+import { aiSettings } from '../config.ts';
 
 export const KINDS = ['sick_leave', 'planned_leave', 'unpaid_leave', 'other_leave', 'late_arrival', 'early_departure', 'work_from_home', 'missing_punch', 'not_attendance'] as const;
 
@@ -47,16 +51,25 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-export const claudeConfigured = () => Boolean(config().anthropic.apiKey);
+export const aiConfigured = () => Boolean(aiSettings().apiKey);
+export const aiName = () => {
+  const a = aiSettings();
+  return a.provider === 'anthropic' ? `Claude (${a.model})` : `NVIDIA ${a.model}`;
+};
 
 export async function readEmail(email: { from: string; receivedAt: string; subject: string; body: string }, employees: Employee[]): Promise<EmailReading> {
-  const client = new Anthropic({ apiKey: config().anthropic.apiKey });
   const list = employees.map((e) => [e.id, e.name, e.aliases && `also called ${e.aliases}`, e.email, e.officeId].filter(Boolean).join(' | ')).join('\n');
   const received = new Date(`${email.receivedAt}:00`).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const prompt = `Employee list (code | name | other names | email | office):\n${list}\n\nEmail received ${received} (India time).\nFrom: ${email.from}\nSubject: ${email.subject}\n\n<email_body>\n${email.body}\n</email_body>`;
+  const codes = new Set(employees.map((e) => e.id));
+  return aiSettings().provider === 'anthropic' ? readWithClaude(prompt, codes) : readWithOpenAiStyle(prompt, codes);
+}
 
+async function readWithClaude(prompt: string, codes: Set<string>): Promise<EmailReading> {
+  const a = aiSettings();
+  const client = new Anthropic({ apiKey: a.apiKey });
   const message = await client.beta.messages.create({
-    model: config().anthropic.model || 'claude-opus-5-5',
+    model: a.model || 'claude-opus-5-5',
     max_tokens: 4000,
     system: SYSTEM,
     messages: [{ role: 'user', content: prompt }],
@@ -68,7 +81,48 @@ export async function readEmail(email: { from: string; receivedAt: string; subje
   if (message.stop_reason === 'max_tokens') throw new Error('The answer was cut off.');
   const text = message.content.find((b) => b.type === 'text');
   if (!text || text.type !== 'text') throw new Error('Claude returned no answer.');
-  return clean(JSON.parse(text.text), new Set(employees.map((e) => e.id)));
+  return clean(JSON.parse(text.text), codes);
+}
+
+/** NVIDIA's API (and any other OpenAI-style chat API): ask for JSON only, then read it carefully. */
+async function readWithOpenAiStyle(prompt: string, codes: Set<string>): Promise<EmailReading> {
+  const a = aiSettings();
+  const instructions = `${SYSTEM}\n\nAnswer with one JSON object and nothing else, with exactly these keys:\n${JSON.stringify(EXAMPLE)}\n"kind" must be one of: ${KINDS.join(', ')}.`;
+  const res = await fetch(`${a.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${a.apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      model: a.model,
+      messages: [{ role: 'system', content: instructions }, { role: 'user', content: prompt }],
+      temperature: 0,
+      max_tokens: 4096,
+      stream: false,
+    }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  const raw = await res.text();
+  if (res.status === 429) throw new Error('The AI service is busy (rate limit). It will be tried again on the next run.');
+  if (!res.ok) throw new Error(`The AI service answered ${res.status}: ${raw.slice(0, 200)}`);
+  const body = JSON.parse(raw) as { choices?: { message?: { content?: string | null }; finish_reason?: string }[] };
+  const choice = body.choices?.[0];
+  const content = choice?.message?.content ?? '';
+  if (!content.trim()) throw new Error(choice?.finish_reason === 'length' ? 'The answer was cut off.' : 'The AI service returned no answer.');
+  return clean(extractJson(content), codes);
+}
+
+const EXAMPLE = { is_attendance: true, kind: 'sick_leave', employee_code: '0001', dates: ['2026-10-29'], half_day: false, confidence: 90, label: 'Sick leave', warning: '' };
+
+/** Pull the JSON object out of a reply that may also contain reasoning or code fences. */
+export function extractJson(text: string): Partial<EmailReading> {
+  const cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```(?:json)?/gi, '');
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new Error('The AI answer did not contain JSON.');
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1));
+  } catch {
+    throw new Error('The AI answer was not valid JSON.');
+  }
 }
 
 /** Never trust the shape blindly: keep only known codes and real dates. */

@@ -8,7 +8,7 @@ import type {
   Notification, Office, Settings, Severity, Shift, SourceHealth,
 } from '../../../shared/types.ts';
 import { db } from '../db.ts';
-import { now } from '../config.ts';
+import { now, today } from '../config.ts';
 import * as R from '../repo.ts';
 import * as D from './dates.ts';
 
@@ -68,7 +68,12 @@ class Builder {
     const imp = await R.latestImport(month);
     const raw = imp ? await R.rawDays(imp.id) : [];
     this.foundAt = imp?.imported_at ?? now();
-    const dataThrough = raw.length ? raw.reduce((m, x) => (x.date > m ? x.date : m), raw[0].date) : null;
+    // A month-to-date export can list the rest of the month as blank or absent, and today is not over yet.
+    // Only days up to yesterday count; later rows are kept in the database but treated as "not yet".
+    const lastFullDay = D.addDays(today(), -1);
+    const lastInFile = raw.length ? raw.reduce((m, x) => (x.date > m ? x.date : m), raw[0].date) : null;
+    const dataThrough = lastInFile && lastInFile > lastFullDay ? lastFullDay : lastInFile;
+    const partial = dates[dates.length - 1] > (dataThrough ?? '');
 
     const byEmp: Record<string, Record<string, R.RawRow>> = {};
     for (const row of raw) (byEmp[row.emp_code] ??= {})[row.date] = row;
@@ -83,9 +88,12 @@ class Builder {
       let notEmployed = 0;
       records[code] = {};
       for (const date of dates) {
-        const row = days[date];
+        const row = dataThrough && date > dataThrough ? undefined : days[date];
         if (!row) {
-          records[code][date] = { employeeId: code, date, code: dataThrough && date <= dataThrough ? 'NR' : 'F' };
+          // No row for this day: only a working day counts as a missing record.
+          const pastDay = !!dataThrough && date <= dataThrough;
+          const offDay = this.r.weeklyOff.includes(D.dow(date)) ? 'WO' : cal[date] ? 'HL' : null;
+          records[code][date] = { employeeId: code, date, code: !pastDay ? 'F' : offDay ?? 'NR', ...(pastDay && offDay === 'HL' ? { note: cal[date] } : {}) };
           continue;
         }
         const dev = deviceCode(row.status);
@@ -265,7 +273,7 @@ class Builder {
     emails.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
     const notifications = await this.notifications();
     return {
-      month, dataThrough: dataThrough ?? dates[0], hasData: raw.length > 0, records,
+      month, dataThrough: dataThrough ?? dates[0], hasData: raw.length > 0, partial: raw.length > 0 && partial, records,
       issues: this.issues.map(({ key: _key, ...x }) => x),
       emails, changes: this.changes, notifications, sources: this.sources(imp), close: await this.close(imp),
     };

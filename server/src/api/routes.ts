@@ -11,7 +11,7 @@ import { writeWorkbook, type ExcelPart } from '../reports/excel.ts';
 import { isUnexplained, totals } from '../reports/summary.ts';
 import { buildPackage, runAll } from '../jobs.ts';
 import { graphConfigured } from '../mail/graph.ts';
-import { claudeConfigured } from '../ai/emailReader.ts';
+import { aiConfigured, aiName } from '../ai/emailReader.ts';
 import { createUser, currentUser, HttpError, needsSetup, requireUser, signIn, signOut } from './auth.ts';
 
 type Handler = (req: Request, res: Response) => Promise<unknown>;
@@ -82,7 +82,7 @@ export function apiRouter(): Router {
   api.get('/connections', user, h(async (): Promise<Connections> => {
     const last = await R.getState('last_run');
     const parsed = last ? (JSON.parse(last) as { at: string; lines: string[] }) : null;
-    return { microsoft: graphConfigured(), claude: claudeConfigured(), sendEmail: config().sendEmail, mailbox: config().microsoft.mailbox, lastRun: parsed?.at ?? null, lastRunLog: parsed?.lines ?? [] };
+    return { microsoft: graphConfigured(), ai: aiConfigured(), aiName: aiName(), sendEmail: config().sendEmail, mailbox: config().microsoft.mailbox, lastRun: parsed?.at ?? null, lastRunLog: parsed?.lines ?? [] };
   }));
 
   // Changing (admin)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useApp } from '../store';
+import { PartialNote } from './Overview';
 import { BarChart } from '../components/BarChart';
 import { Empty, PageHead, Panel, Pill, Stat } from '../components/ui';
 import { fmtDay, fmtMonth, fmtMonthShort, fmtWhen, pct, plural } from '../lib/format';
@@ -74,6 +75,7 @@ export function Reports() {
           </>
         }
       />
+      {data.partial && !data.close.closed && <PartialNote />}
       {!recipients && <p className="note">No one is set to receive the monthly package yet. Add email addresses on the Rules page under “Month close and reports”.</p>}
       <SavedReports />
       <div className="stats">
@@ -171,7 +173,7 @@ function SavedReports() {
     <Panel
       title="Saved monthly packages"
       note="Each package is an Excel workbook: summary, master sheet, daily detail, issues, HR emails and change log."
-      actions={ref.user?.role === 'admin' && data.hasData !== false && <button className="btn sm" onClick={buildNow} disabled={busy}>{busy ? 'Building…' : 'Build and email now'}</button>}
+      actions={ref.user?.role === 'admin' && data.hasData !== false && <button className="btn sm" onClick={buildNow} disabled={busy}>{busy ? 'Building…' : data.partial ? 'Build and email now (month so far)' : 'Build and email now'}</button>}
       flush
     >
       {reports.length ? (

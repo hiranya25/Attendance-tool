@@ -41,7 +41,7 @@ export function Files() {
     <>
       <PageHead
         title="Attendance files"
-        sub={`The monthly "Month Date Wise Performance" export from the punch system. Upload it here, or email it to ${ref.settings.hrEmail} and the tool imports it by itself.`}
+        sub={`The monthly "Month Date Wise Performance" export from the punch system. Upload it here, or email it to ${ref.settings.hrEmail} and the tool imports it by itself. You can upload the month so far at any time; a newer file for the same month replaces the older one.`}
       />
       {isAdmin && (
         <Panel title="Upload a file" note="A newer file for the same month replaces the older one. The older file is kept and any punches that arrive late are logged.">

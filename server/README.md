@@ -44,7 +44,7 @@ src/
   schema.ts, seed.ts     Tables, plus the starting calendars, shift times and rules
   import/                Reader for the punch system's .xls/.xlsx export, and the importer
   engine/monthBuilder.ts Builds a month from the raw rows: calendars, joiners/leavers, emails, rules, reminders
-  ai/emailReader.ts      Claude reads one HR email and returns person, days, type and confidence
+  ai/emailReader.ts      The AI (NVIDIA Nemotron, or Claude) reads one HR email: person, days, type and confidence
   mail/                  Microsoft Graph (read hr@, send mail) and the email log
   reports/               Excel workbook and the management summary
   jobs.ts                Mailbox, reminders, HR summary, month close
@@ -55,8 +55,9 @@ src/
 ## Main rules (all editable on the Rules page)
 
 - Late, early and short hours are measured against the shift table, not the punch system's own flags. Those flags were found to be wrong: shift E1 was marked late every single day.
+- A month-to-date file can be uploaded at any time. Days after yesterday are ignored until a newer file covers them.
 - Holidays come from each person's holiday calendar. A holiday sent as "absent" becomes a holiday; working on a holiday is noted.
 - Days before joining or after leaving are "not employed", not absences.
 - Five or more absences in a row become one "Long absence" item, and HR gets an alert.
 - Three or more people with the same gap in one office on one day are marked "Likely system issue" and not counted against anyone.
-- An HR email is applied when Claude's match confidence is 80% or more. Below that, the day is marked "Communicated, unclear".
+- An HR email is applied when the AI's match confidence is 80% or more. Below that, the day is marked "Communicated, unclear".

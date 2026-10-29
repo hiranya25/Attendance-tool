@@ -3,7 +3,7 @@
 This guide takes about an hour the first time. You need:
 - your cPanel login,
 - someone who can sign in to Microsoft 365 as an admin (for step 6),
-- a Claude API key (step 7).
+- an NVIDIA API key (step 7).
 
 The app is a Node.js app with a PostgreSQL database. Everything is bundled, so the server never needs `npm install`.
 
@@ -55,7 +55,7 @@ Make sure it has an SSL certificate (cPanel's **SSL/TLS Status**, then **Run Aut
 | `database.user`, `database.password`, `database.database` | From step 2. Leave `client` as `pg`, `host` as `localhost` and `port` as `5432` |
 | `sessionSecret` | Any long random text (40+ characters) |
 | `microsoft` | Leave empty for now. Step 6 fills it in. |
-| `anthropic.apiKey` | Leave empty for now. Step 7 fills it in. |
+| `ai.apiKey` | Leave empty for now. Step 7 fills it in. Keep `provider`, `model` and `baseUrl` as they are |
 | `sendEmail` | Set to `false` until you have checked everything. The tool then records every email it would send without sending it. |
 
 Keep `config.json` private. It holds passwords and must never go inside `public_html`.
@@ -115,14 +115,20 @@ The tool reads new emails at hr@amipi.com (leave, sick days, late notes, and att
 
 The tool reads mail from three days before it was connected onwards. It never deletes or moves anything in the mailbox.
 
-## 7. Connect Claude (reads the HR emails)
+## 7. Connect the AI that reads HR emails (NVIDIA Nemotron)
 
-1. Go to **console.anthropic.com**, create an API key, and set a monthly spend limit if you want one.
-2. Put the key into `config.json` under `anthropic.apiKey` and restart the app.
+1. Go to **build.nvidia.com** and sign in. A free NVIDIA account is enough.
+2. Search for the model **nemotron-3-ultra-550b-a55b** and open it.
+3. Click **Get API Key** and copy it. It starts with `nvapi-`.
+4. Put it into `config.json` under `ai.apiKey`, restart the app, and click **Run checks now** on the Rules page. The AI line should say **Connected**.
 
-Claude only reads each email and reports who it is about, which days, and what kind of absence. The tool's own rules decide what changes.
+The AI only reads each email and reports who it is about, which days, what kind of absence it is, and how sure it is. The tool's own rules decide what changes.
 
-The model is set in `anthropic.model`. Server-side fallback is turned on: if a request is ever declined, it is retried on a fallback model chosen by Anthropic.
+**About the free key:**
+- **Limits.** The free tier has a request limit. If it is reached, the email is simply read again on the next 15-minute run.
+- **Privacy.** HR emails, including sick-leave details, are sent to NVIDIA's service to be read. Check that NVIDIA's terms for the free key suit company HR data, and that the founder is happy with it.
+
+**Using Claude instead:** set `"ai": { "provider": "anthropic", "apiKey": "sk-ant-...", "model": "claude-opus-5-5" }` and restart.
 
 ## 8. Before switching email on
 

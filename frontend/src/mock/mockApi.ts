@@ -51,7 +51,7 @@ export const mockApi: AttendanceApi = {
       presentRate: totals(Object.values(d.records).flatMap((r) => Object.values(r))).rate,
     };
   })),
-  connections: () => wait({ microsoft: false, claude: false, sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
+  connections: () => wait({ microsoft: false, ai: false, aiName: 'NVIDIA nvidia/nemotron-3-ultra-550b-a55b', sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
   listImports: () => wait(MONTHS.map((m, i) => ({ id: i + 1, month: m, fileName: `monthdatewiseperformance-${m}.xls`, source: 'upload' as const, importedAt: `${m}-28T10:00`, importedBy: 'Sample data', people: EMPLOYEES.length, days: EMPLOYEES.length * 30 })).reverse()),
 
   async saveSettings(next) {

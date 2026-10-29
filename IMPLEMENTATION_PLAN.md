@@ -13,7 +13,7 @@ Updated 29 Oct 2026. The tool runs by itself: no HR approvals anywhere. Every ch
 | File import | Reads the punch system's "Month Date Wise Performance" export, uploaded on the site or emailed to hr@amipi.com |
 | Rules | Late, early, short hours, missing punches, absences, long absences, and likely device faults, measured against an editable shift table |
 | Calendars | HR's 2026 lists: US holidays, NY shift (India), India day shift, Mumbai office |
-| HR emails | Claude reads hr@amipi.com (Outlook) and applies leave and late notes automatically |
+| HR emails | An AI model (NVIDIA Nemotron, free key) reads hr@amipi.com (Outlook) and applies leave and late notes automatically |
 | Messages | Employee reminders, HR daily summary, alerts for long absences and device problems |
 | Month close | Excel package saved on the site and emailed. A revised version is sent if a newer file arrives |
 
@@ -39,15 +39,15 @@ Full steps: `docs/DEPLOY.md`, steps 1 to 5.
 
 ---
 
-## Phase 2: Connect Outlook and Claude (week of 2 Nov, can run alongside Phase 1)
+## Phase 2: Connect Outlook and the AI (week of 2 Nov, can run alongside Phase 1)
 
-**Owner:** your Microsoft 365 admin (about 10 minutes), and you for the Claude key.
+**Owner:** your Microsoft 365 admin (about 10 minutes), and you for the NVIDIA key.
 
 1. Register the "Attendance Desk" app in Microsoft Entra with the `Mail.Read` and `Mail.Send` permissions, ideally limited to the hr@amipi.com mailbox only.
-2. Create a Claude API key at console.anthropic.com, with a monthly spend limit if wanted.
+2. Get a free NVIDIA API key at build.nvidia.com for the nemotron-3-ultra-550b-a55b model.
 3. Put both into `config.json`, restart the app, and click **Run checks now**.
 
-**Done when:** the Rules page shows Outlook and Claude as **Connected**. A test email to hr@ ("I'm on sick leave tomorrow") then appears on the HR emails page, matched to the right person and day.
+**Done when:** the Rules page shows Outlook and the AI as **Connected**. A test email to hr@ ("I'm on sick leave tomorrow") then appears on the HR emails page, matched to the right person and day.
 
 Full steps: `docs/DEPLOY.md`, steps 6 and 7.
 
@@ -62,7 +62,7 @@ Full steps: `docs/DEPLOY.md`, steps 6 and 7.
 | Confirm the 7 shift times (G, D, S1, E1, E4, G2, P1) | Rules, Shift timings | Late and early flags depend on them. They are estimated today |
 | Employee email addresses | People | Reminders cannot reach anyone without them |
 | Joining and leaving dates | People | Stops new joiners and leavers showing up as absent |
-| Nicknames used in emails | People | Helps Claude match emails like "Jolly" or "Anna" |
+| Nicknames used in emails | People | Helps the AI match emails like "Jolly" or "Anna" |
 | Mumbai Diwali week and Paryushan date, and any observed days | Rules, Holiday calendars | Currently marked "Check date" or missing |
 | Who receives the monthly report | Rules, Month close and reports | Nobody is set yet |
 
@@ -70,11 +70,11 @@ Full steps: `docs/DEPLOY.md`, steps 6 and 7.
 
 ---
 
-## Phase 4: Trial month alongside Jainam (November 2026)
+## Phase 4: Trial alongside Jainam (starts now, through November 2026)
 
 **Owner:** Jainam, with me fixing anything that differs.
 
-1. Upload the October file when it is ready. Jainam keeps doing October and November by hand as usual.
+1. **Now:** export October so far from the punch system and upload it. There is no need to wait for the month to end. Days after yesterday are ignored until a newer file covers them. Upload a fresh export whenever you like; the full October file replaces it automatically. Jainam keeps doing October and November by hand as usual.
 2. Compare the tool's monthly workbook with Jainam's final file, person by person.
 3. Fix any differences on the Rules page (shift times, grace period, calendars), or tell me and I change the logic.
 4. Halfway through the month, set `"sendEmail": true`. Start with report recipients and HR only, then switch on employee reminders.
@@ -123,15 +123,15 @@ Full steps: `docs/DEPLOY.md`, steps 6 and 7.
 | Shift times are wrong | Late flags will be off. Fix them on the Rules page; every month is re-checked straight away |
 | InMotion plan has no "Setup Node.js App" | Ask InMotion support to enable it, or move to a plan that has it |
 | Punch file comes only monthly | Reports and the month close still work fully. Reminders are limited, see Phase 4 |
-| Emails in mixed Hindi and English, or from personal addresses | Claude gives lower confidence and the day is kept as "Communicated, unclear". Adjust the 80% threshold if needed |
+| Emails in mixed Hindi and English, or from personal addresses | The AI gives lower confidence and the day is kept as "Communicated, unclear". Adjust the 80% threshold if needed |
 
 ## Timeline
 
 | When | Phase | You will have |
 |---|---|---|
 | Week of 2 Nov | 1. Put it online | The tool live at its own address with September data |
-| Week of 2 Nov | 2. Connect Outlook and Claude | HR emails read and applied automatically |
+| Week of 2 Nov | 2. Connect Outlook and the AI | HR emails read and applied automatically |
 | Weeks of 2 and 9 Nov | 3. Fill in details | Confirmed shifts, emails, dates and report recipients |
-| November | 4. Trial month | October and November checked against Jainam's results |
+| Now to November | 4. Trial | October so far in the tool now; October and November checked against Jainam's results |
 | December | 5. Switch over | The month closes and reports go out on their own |
 | From January 2027 | 6. Additions | Mumbai, New York, leave balances, as needed |

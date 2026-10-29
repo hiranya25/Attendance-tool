@@ -203,6 +203,8 @@ export interface MonthData {
   month: string;
   dataThrough: string; // last date with data
   hasData?: boolean;
+  /** The file does not cover the whole month yet (a month-to-date export). */
+  partial?: boolean;
   records: Record<string, Record<string, DayRecord>>; // employeeId -> date -> record
   issues: Issue[];
   emails: HrEmail[];
@@ -260,7 +262,9 @@ export interface ImportRecord {
 
 export interface Connections {
   microsoft: boolean;
-  claude: boolean;
+  /** The AI model that reads HR emails is set up. */
+  ai: boolean;
+  aiName: string;
   sendEmail: boolean;
   mailbox: string;
   lastRun: string | null;

@@ -7,7 +7,7 @@ Updated 29 Oct 2026.
 - **Screens and server**, ready for InMotion cPanel (Node.js + PostgreSQL). Setup steps: `docs/DEPLOY.md`.
 - **Reads the punch system's monthly file** ("Month Date Wise Performance", .xls). Tested on the real September 2026 file: 22 people, 660 days.
 - **Fully automatic, no approvals.** Holidays, joiners and leavers, HR emails and late punches are applied by the tool. Every change is logged and the original data is kept.
-- **HR emails** at hr@amipi.com (Outlook) are read by Claude. Attendance files sent as attachments are imported automatically.
+- **HR emails** at hr@amipi.com (Outlook) are read by an AI model (NVIDIA Nemotron, free key). Attendance files sent as attachments are imported automatically.
 - **Reminders** go to employees, a daily summary to HR, and alerts for long absences and likely device problems.
 - **Month close:** the Excel package (summary, master sheet, daily detail, issues, emails, change log) is saved on the site and emailed to the people you choose. If a newer file arrives later, a revised version is sent.
 - **Holiday calendars** from HR's lists: US holidays (NY office and remote), NY shift (India), India day shift, and Mumbai office.
@@ -24,7 +24,8 @@ Updated 29 Oct 2026.
 
 1. **Deploy access:** do the steps in `docs/DEPLOY.md`, or give me what is needed and I'll walk you through it.
 2. **Microsoft 365 admin** to register the app for hr@amipi.com (`docs/DEPLOY.md`, step 6).
-3. **Claude API key** from console.anthropic.com (step 7).
+3. **NVIDIA API key** from build.nvidia.com (step 7).
+4. **October so far:** export October from the punch system now and upload it. A newer file replaces it later.
 4. **Shift times:** the 7 shift codes (G, D, S1, E1, E4, G2, P1) are estimated from September data. Jainam should confirm them on the Rules page.
 5. **Holiday dates to confirm:** Mumbai's Diwali week, Mumbai's Paryushan last day (not added yet), and whether US Independence Day (Sat 4 Jul) had a Friday off.
 6. **Employee emails and joining dates**, so reminders reach people and new joiners are handled correctly.

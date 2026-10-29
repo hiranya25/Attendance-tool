@@ -36,6 +36,8 @@ export function Overview() {
         title={fmtMonth(data.month)}
         sub={data.close.closed ? 'This month is closed and its report is saved. A newer file would send a revised report.' : `Updated automatically whenever a new file or HR email arrives. Data up to ${fmtDay(data.dataThrough)}.`}
       />
+      {data.partial && !data.close.closed && <PartialNote />}
+      {data.hasData === false && <p className="note">No attendance file for {fmtMonth(data.month)} yet. Export the month so far from the punch system and upload it on Attendance files. You do not need to wait for the month to end.</p>}
       <div className="stats">
         <Stat label="Needs attention" value={attention.length} sub={`${plural(handled, 'other item')} handled by the tool`} tone={attention.length ? 'bad' : 'ok'} />
         <Stat label="Unexplained absences" value={unexplained.length} sub="No punches, no leave, no email" tone={unexplained.length ? 'warn' : undefined} />
@@ -129,5 +131,16 @@ export function Overview() {
         </Panel>
       </div>
     </>
+  );
+}
+
+/** Shown while a month-to-date file is in use. */
+export function PartialNote() {
+  const { data } = useApp();
+  return (
+    <p className="note">
+      {fmtMonth(data.month)} is still in progress. This file covers up to {fmtDay(data.dataThrough)}; later days are not counted yet.
+      Upload a newer export from the punch system any time and it replaces this one. The month closes on {fmtDay(data.close.closesAt)} with the final file.
+    </p>
   );
 }

@@ -8,9 +8,13 @@ export interface AppConfig {
   storageDir: string;
   sessionSecret: string;
   microsoft: { tenantId: string; clientId: string; clientSecret: string; mailbox: string; sender: string };
-  anthropic: { apiKey: string; model: string };
+  ai: { provider: 'nvidia' | 'anthropic'; apiKey: string; model: string; baseUrl: string };
+  /** Older config files: Claude settings. Used only when "ai" is not set. */
+  anthropic?: { apiKey: string; model: string };
   sendEmail: boolean;
 }
+
+const NVIDIA_DEFAULTS: AppConfig['ai'] = { provider: 'nvidia', apiKey: '', model: 'nvidia/nemotron-3-ultra-550b-a55b', baseUrl: 'https://integrate.api.nvidia.com/v1' };
 
 let cached: AppConfig | null = null;
 let baseDir = process.cwd();
@@ -27,7 +31,11 @@ export function config(): AppConfig {
     ...raw,
     database: { client: 'pg', ...raw.database },
     microsoft: { tenantId: '', clientId: '', clientSecret: '', mailbox: 'hr@amipi.com', sender: 'hr@amipi.com', ...raw.microsoft },
-    anthropic: { apiKey: '', model: 'claude-opus-5-5', ...raw.anthropic },
+    ai: raw.ai
+      ? { ...NVIDIA_DEFAULTS, ...(raw.ai as Partial<AppConfig['ai']>) }
+      : raw.anthropic?.apiKey
+        ? { provider: 'anthropic', apiKey: raw.anthropic.apiKey, model: raw.anthropic.model || 'claude-opus-5-5', baseUrl: '' }
+        : NVIDIA_DEFAULTS,
   } as AppConfig;
   process.env.TZ = cached.timezone;
   return cached;
@@ -63,4 +71,8 @@ export function now(): string {
 export function localStamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+export function aiSettings() {
+  return config().ai;
 }

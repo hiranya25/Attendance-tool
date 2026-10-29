@@ -18,9 +18,11 @@
     "mailbox": "hr@amipi.com",
     "sender": "hr@amipi.com"
   },
-  "anthropic": {
+  "ai": {
+    "provider": "nvidia",
     "apiKey": "",
-    "model": "claude-opus-5-5"
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "baseUrl": "https://integrate.api.nvidia.com/v1"
   },
   "sendEmail": true
 }

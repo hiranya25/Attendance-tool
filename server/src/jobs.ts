@@ -10,7 +10,7 @@ import { buildMonth, issueKey, NOTIFY_TYPES } from './engine/monthBuilder.ts';
 import { importPunchFile } from './import/importer.ts';
 import { attachments, graphConfigured, messagesSince } from './mail/graph.ts';
 import { esc, layout, send } from './mail/mailer.ts';
-import { claudeConfigured, readEmail } from './ai/emailReader.ts';
+import { aiConfigured, aiName, readEmail } from './ai/emailReader.ts';
 import { writeWorkbook } from './reports/excel.ts';
 import { needsAttention, summaryLines } from './reports/summary.ts';
 
@@ -36,7 +36,7 @@ export async function runAll(log: (m: string) => void = () => {}): Promise<strin
   return lines;
 }
 
-/** New emails at hr@: import attached punch files, and read the rest with Claude. */
+/** New emails at hr@: import attached punch files, and read the rest with the AI model. */
 export async function readMailbox(): Promise<string> {
   if (!graphConfigured()) return 'Microsoft 365 not connected yet, skipped.';
   const k = await db();
@@ -67,7 +67,7 @@ export async function readMailbox(): Promise<string> {
         }
       }
     }
-    if (!handled) Object.assign(row, await readWithClaude(row as { from_addr: string; received_at: string; subject: string; body: string }, employees));
+    if (!handled) Object.assign(row, await readWithAi(row as { from_addr: string; received_at: string; subject: string; body: string }, employees));
     await k('emails').insert(row);
     done++;
   }
@@ -75,15 +75,15 @@ export async function readMailbox(): Promise<string> {
 
   let retried = 0;
   for (const old of await k('emails').whereNot({ error: '' }).whereNot({ kind: 'attendance_file' }).orderBy('id').limit(10)) {
-    const fields = await readWithClaude(old, employees);
+    const fields = await readWithAi(old, employees);
     if (!fields.error) retried++;
     await k('emails').where({ id: old.id }).update(fields);
   }
   return `${done} new ${done === 1 ? 'email' : 'emails'}${retried ? `, ${retried} read on retry` : ''}.`;
 }
 
-async function readWithClaude(row: { from_addr: string; received_at: string; subject: string; body: string }, employees: Employee[]) {
-  if (!claudeConfigured()) return { error: 'The Claude API key is not set in config.json.' };
+async function readWithAi(row: { from_addr: string; received_at: string; subject: string; body: string }, employees: Employee[]) {
+  if (!aiConfigured()) return { error: `The AI API key is not set in config.json (${aiName()}).` };
   try {
     const r = await readEmail({ from: row.from_addr, receivedAt: row.received_at, subject: row.subject, body: row.body }, employees);
     return {

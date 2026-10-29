@@ -1,6 +1,6 @@
 // The numbers and sentences for the management summary. Same rules as the Monthly report screen.
 import type { DayRecord, Employee, Issue, MonthData } from '../../../shared/types.ts';
-import { monthName } from '../engine/dates.ts';
+import { day, monthName } from '../engine/dates.ts';
 
 export function totals(days: DayRecord[]) {
   const t = { present: 0, absent: 0, leave: 0, holiday: 0, weeklyOff: 0, workdays: 0, minutes: 0, rate: 0 };
@@ -42,6 +42,7 @@ export function summaryLines(data: MonthData, emps: Record<string, Employee>): s
   const pats = patterns(data.issues);
   const people = Object.keys(data.records).length;
   const lines = [
+    ...(data.partial && !data.close.closed ? [`${monthName(data.month)} is still in progress. These figures cover up to ${day(data.dataThrough)}; later days are not counted yet.`] : []),
     `${monthName(data.month)}: present rate ${t.rate}% across ${people} people. Leave, holidays and weekly offs are left out of the rate.`,
     `${data.issues.length} items found. The tool handled ${data.issues.length - attention.length} by itself (emails, later data, likely system issues). ${attention.length} still need attention.`,
     `${applied} HR ${applied === 1 ? 'email' : 'emails'} applied automatically, ${unclear} kept as communicated but unclear.`,

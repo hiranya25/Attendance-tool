@@ -2,7 +2,7 @@
 
 Automated attendance for AMIPI: Indore (BT Office), remote staff, and later Mumbai and New York.
 
-It takes in the punch system's monthly file (uploaded, or emailed to hr@amipi.com) and reads HR emails with Claude. It then applies holiday calendars, leave and the attendance rules, sends reminders and an HR summary, and closes each month with an Excel package that is saved and emailed. Nothing needs approval. Every change is logged, and the original data is never changed.
+It takes in the punch system's monthly file (uploaded, or emailed to hr@amipi.com) and reads HR emails with an AI model (NVIDIA Nemotron by default). It then applies holiday calendars, leave and the attendance rules, sends reminders and an HR summary, and closes each month with an Excel package that is saved and emailed. Nothing needs approval. Every change is logged, and the original data is never changed.
 
 | Folder | What it is |
 |---|---|
@@ -82,7 +82,7 @@ In the `server` folder, create a new file called `config.json` and paste this in
   "storageDir": "./storage",
   "sessionSecret": "any-long-random-text-for-local-testing",
   "microsoft": { "tenantId": "", "clientId": "", "clientSecret": "", "mailbox": "hr@amipi.com", "sender": "hr@amipi.com" },
-  "anthropic": { "apiKey": "", "model": "claude-opus-5-5" },
+  "ai": { "provider": "nvidia", "apiKey": "", "model": "nvidia/nemotron-3-ultra-550b-a55b", "baseUrl": "https://integrate.api.nvidia.com/v1" },
   "sendEmail": false
 }
 ```
@@ -155,7 +155,7 @@ Open **http://localhost:5173**.
 
 ### Optional: test HR email reading on your computer
 
-Put a Claude API key in `anthropic.apiKey`, and the Microsoft 365 app details in `microsoft` (see `docs/DEPLOY.md`, steps 6 and 7). Then restart, and click **Run checks now**. Keep `"sendEmail": false`, so nothing is emailed to employees while testing.
+Put your NVIDIA API key (starts with `nvapi-`) in `ai.apiKey`, and the Microsoft 365 app details in `microsoft` (see `docs/DEPLOY.md`, steps 6 and 7). Then restart, and click **Run checks now**. Keep `"sendEmail": false`, so nothing is emailed to employees while testing.
 
 ### Other useful commands
 
