@@ -1,36 +1,53 @@
 // Fictional sample data for the demo. Names and emails are invented.
-import type { Employee, Holiday, Office, Settings } from '../types';
+import type { Calendar, Employee, Holiday, Office, Settings, Shift } from '../types';
 
 export const TODAY = '2026-10-29';
 export const MONTHS = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
 
 export const OFFICES: Office[] = [
-  { id: 'indore', name: 'Indore', timeZone: 'Asia/Kolkata', tzLabel: 'IST', shiftStart: 570, shiftEnd: 1110, calendar: 'IN', source: 'Indore biometric' },
-  { id: 'mumbai', name: 'Mumbai', timeZone: 'Asia/Kolkata', tzLabel: 'IST', shiftStart: 600, shiftEnd: 1140, calendar: 'IN', source: 'Mumbai biometric' },
-  { id: 'newyork', name: 'New York', timeZone: 'America/New_York', tzLabel: 'ET', shiftStart: 540, shiftEnd: 1020, calendar: 'US', source: 'New York door system' },
-  { id: 'remote', name: 'Remote', timeZone: 'Asia/Kolkata', tzLabel: 'IST', shiftStart: 600, shiftEnd: 1140, calendar: 'IN', source: 'Remote login tracker' },
+  { id: 'indore', name: 'Indore', timeZone: 'Asia/Kolkata', tzLabel: 'IST', source: 'Indore biometric', departments: ['INDORE'] },
+  { id: 'mumbai', name: 'Mumbai', timeZone: 'Asia/Kolkata', tzLabel: 'IST', source: 'Mumbai biometric', departments: ['MUMBAI'] },
+  { id: 'newyork', name: 'New York', timeZone: 'America/New_York', tzLabel: 'ET', source: 'New York door system', departments: ['NEW YORK'] },
+  { id: 'remote', name: 'Remote', timeZone: 'Asia/Kolkata', tzLabel: 'IST', source: 'Remote login tracker', departments: ['REMOTE'] },
 ];
 
+export const SHIFTS: Shift[] = [
+  { code: 'G', name: 'General shift', start: 570, end: 1110, confirmed: true },
+  { code: 'M', name: 'Mumbai shift', start: 600, end: 1140, confirmed: true },
+  { code: 'NY', name: 'New York shift', start: 540, end: 1020, confirmed: true },
+];
+
+export const CALENDARS: Calendar[] = [
+  { id: 'IN', name: 'India holidays', description: 'Indore, Mumbai and remote staff.' },
+  { id: 'US', name: 'US holidays', description: 'New York office.' },
+];
+
+const SHIFT_OF: Record<string, string> = { indore: 'G', mumbai: 'M', newyork: 'NY', remote: 'M' };
+const CAL_OF: Record<string, string> = { indore: 'IN', mumbai: 'IN', newyork: 'US', remote: 'IN' };
+const person = (e: { id: string; name: string; officeId: string; department: string; email: string; joinDate: string; exitDate?: string }): Employee => ({
+  ...e, exitDate: e.exitDate ?? null, shiftCode: SHIFT_OF[e.officeId], calendarId: CAL_OF[e.officeId], aliases: '',
+});
+
 export const EMPLOYEES: Employee[] = [
-  { id: 'E101', name: 'Aarav Mehta', officeId: 'indore', department: 'Engineering', email: 'aarav.mehta@example.com', joinDate: '2023-04-03' },
-  { id: 'E102', name: 'Neha Joshi', officeId: 'indore', department: 'Engineering', email: 'neha.joshi@example.com', joinDate: '2022-08-16' },
-  { id: 'E103', name: 'Rohan Patil', officeId: 'indore', department: 'Operations', email: 'rohan.patil@example.com', joinDate: '2024-01-08' },
-  { id: 'E104', name: 'Divya Rao', officeId: 'indore', department: 'Finance', email: 'divya.rao@example.com', joinDate: '2021-11-01' },
-  { id: 'E105', name: 'Kunal Shah', officeId: 'indore', department: 'Support', email: 'kunal.shah@example.com', joinDate: '2025-02-17' },
-  { id: 'E106', name: 'Pooja Verma', officeId: 'indore', department: 'Design', email: 'pooja.verma@example.com', joinDate: '2026-10-12' },
-  { id: 'E201', name: 'Isha Kapoor', officeId: 'mumbai', department: 'Operations', email: 'isha.kapoor@example.com', joinDate: '2020-06-01' },
-  { id: 'E202', name: 'Vikram Nair', officeId: 'mumbai', department: 'Engineering', email: 'vikram.nair@example.com', joinDate: '2023-09-11' },
-  { id: 'E203', name: 'Sana Qureshi', officeId: 'mumbai', department: 'Finance', email: 'sana.qureshi@example.com', joinDate: '2022-03-21' },
-  { id: 'E204', name: 'Manav Desai', officeId: 'mumbai', department: 'Support', email: 'manav.desai@example.com', joinDate: '2024-07-15' },
-  { id: 'E205', name: 'Ritesh Jain', officeId: 'mumbai', department: 'Sales', email: 'ritesh.jain@example.com', joinDate: '2023-01-09', exitDate: '2026-10-09' },
-  { id: 'E301', name: 'Maya Collins', officeId: 'newyork', department: 'Finance', email: 'maya.collins@example.com', joinDate: '2021-05-10' },
-  { id: 'E302', name: 'Daniel Ortiz', officeId: 'newyork', department: 'Operations', email: 'daniel.ortiz@example.com', joinDate: '2022-10-03' },
-  { id: 'E303', name: 'Grace Liu', officeId: 'newyork', department: 'Support', email: 'grace.liu@example.com', joinDate: '2024-03-04' },
-  { id: 'E304', name: 'Ben Harper', officeId: 'newyork', department: 'Sales', email: 'ben.harper@example.com', joinDate: '2025-06-02' },
-  { id: 'E401', name: 'Tanvi Bose', officeId: 'remote', department: 'Engineering', email: 'tanvi.bose@example.com', joinDate: '2023-02-13' },
-  { id: 'E402', name: 'Arjun Kulkarni', officeId: 'remote', department: 'Engineering', email: 'arjun.kulkarni@example.com', joinDate: '2024-05-20' },
-  { id: 'E403', name: 'Farah Sheikh', officeId: 'remote', department: 'Support', email: 'farah.sheikh@example.com', joinDate: '2022-12-05' },
-  { id: 'E404', name: 'Kabir Malhotra', officeId: 'remote', department: 'Design', email: 'kabir.malhotra@example.com', joinDate: '2025-09-01' },
+  person({ id: 'E101', name: 'Aarav Mehta', officeId: 'indore', department: 'Engineering', email: 'aarav.mehta@example.com', joinDate: '2023-04-03' }),
+  person({ id: 'E102', name: 'Neha Joshi', officeId: 'indore', department: 'Engineering', email: 'neha.joshi@example.com', joinDate: '2022-08-16' }),
+  person({ id: 'E103', name: 'Rohan Patil', officeId: 'indore', department: 'Operations', email: 'rohan.patil@example.com', joinDate: '2024-01-08' }),
+  person({ id: 'E104', name: 'Divya Rao', officeId: 'indore', department: 'Finance', email: 'divya.rao@example.com', joinDate: '2021-11-01' }),
+  person({ id: 'E105', name: 'Kunal Shah', officeId: 'indore', department: 'Support', email: 'kunal.shah@example.com', joinDate: '2025-02-17' }),
+  person({ id: 'E106', name: 'Pooja Verma', officeId: 'indore', department: 'Design', email: 'pooja.verma@example.com', joinDate: '2026-10-12' }),
+  person({ id: 'E201', name: 'Isha Kapoor', officeId: 'mumbai', department: 'Operations', email: 'isha.kapoor@example.com', joinDate: '2020-06-01' }),
+  person({ id: 'E202', name: 'Vikram Nair', officeId: 'mumbai', department: 'Engineering', email: 'vikram.nair@example.com', joinDate: '2023-09-11' }),
+  person({ id: 'E203', name: 'Sana Qureshi', officeId: 'mumbai', department: 'Finance', email: 'sana.qureshi@example.com', joinDate: '2022-03-21' }),
+  person({ id: 'E204', name: 'Manav Desai', officeId: 'mumbai', department: 'Support', email: 'manav.desai@example.com', joinDate: '2024-07-15' }),
+  person({ id: 'E205', name: 'Ritesh Jain', officeId: 'mumbai', department: 'Sales', email: 'ritesh.jain@example.com', joinDate: '2023-01-09', exitDate: '2026-10-09' }),
+  person({ id: 'E301', name: 'Maya Collins', officeId: 'newyork', department: 'Finance', email: 'maya.collins@example.com', joinDate: '2021-05-10' }),
+  person({ id: 'E302', name: 'Daniel Ortiz', officeId: 'newyork', department: 'Operations', email: 'daniel.ortiz@example.com', joinDate: '2022-10-03' }),
+  person({ id: 'E303', name: 'Grace Liu', officeId: 'newyork', department: 'Support', email: 'grace.liu@example.com', joinDate: '2024-03-04' }),
+  person({ id: 'E304', name: 'Ben Harper', officeId: 'newyork', department: 'Sales', email: 'ben.harper@example.com', joinDate: '2025-06-02' }),
+  person({ id: 'E401', name: 'Tanvi Bose', officeId: 'remote', department: 'Engineering', email: 'tanvi.bose@example.com', joinDate: '2023-02-13' }),
+  person({ id: 'E402', name: 'Arjun Kulkarni', officeId: 'remote', department: 'Engineering', email: 'arjun.kulkarni@example.com', joinDate: '2024-05-20' }),
+  person({ id: 'E403', name: 'Farah Sheikh', officeId: 'remote', department: 'Support', email: 'farah.sheikh@example.com', joinDate: '2022-12-05' }),
+  person({ id: 'E404', name: 'Kabir Malhotra', officeId: 'remote', department: 'Design', email: 'kabir.malhotra@example.com', joinDate: '2025-09-01' }),
 ];
 
 export const HOLIDAYS: Holiday[] = [
@@ -58,16 +75,19 @@ export const DEFAULT_SETTINGS: Settings = {
   earlyToleranceMinutes: 30,
   shortHoursToleranceMinutes: 90,
   halfDayBelowHours: 4.5,
-  duplicatePunchLimit: 2,
   systemIssueMinPeople: 3,
+  longAbsenceDays: 5,
   autoApplyConfidence: 80,
   remindersOn: true,
   reminderAfterDays: 1,
+  reminderWindowDays: 7,
+  hrDigestOn: true,
   hrDigestTime: '18:00',
+  hrEmail: 'hr@amipi.com',
   closeDay: 1,
   reportRecipients: ['hr@amipi.com', 'founder@example.com'],
   weeklyOff: [0, 6],
-  shifts: Object.fromEntries(OFFICES.map((o) => [o.id, { start: o.shiftStart, end: o.shiftEnd }])),
+  punchFileName: 'monthdatewiseperformance',
 };
 
 /** Planned October problems, so every kind of issue shows up in the demo. Day of month -> kind. */

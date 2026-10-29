@@ -2,7 +2,19 @@
 
 Updated 29 Oct 2026. The tool runs by itself: no HR approvals anywhere. Every change it makes is logged and the original data is always kept.
 
-**Done so far:** the screens (`frontend/`), running on sample data.
+## Status (29 Oct 2026)
+
+| Phase | Status |
+|---|---|
+| 0. Inputs | Mostly in: the punch file, holiday lists, Outlook confirmed, AI approved. Still open: shift times, employee emails, report recipients |
+| 1. First real version | **Built.** Server, database, file import, screens on real data, Excel downloads |
+| 2. Daily data | **Built for the monthly punch file** (upload or email). Mumbai and New York sources are still to come |
+| 3. HR emails | **Built.** Waits for the Microsoft 365 app registration and the Claude API key |
+| 4. Reminders and alerts | **Built.** Waits for Microsoft 365 and employee email addresses |
+| 5. Month close and reports | **Built and tested** on September 2026 |
+| 6. Go live | **Next:** deploy on InMotion cPanel (`docs/DEPLOY.md`), then run one month next to Jainam |
+
+The original plan follows for reference.
 
 **Total time:** about 14 weeks from the day the inputs arrive. Each phase ends with something you can see and use.
 

@@ -1,80 +1,36 @@
-# Attendance Tool: Next Steps (Revised)
+# Attendance Tool: Where We Are
 
-Updated 29 Oct 2026. This replaces the earlier plan where it disagrees.
+Updated 29 Oct 2026.
 
-## The big change: fully automated, no approvals
+## Built and tested
 
-The tool decides and records everything by itself. Nobody has to click "approve".
+- **Screens and server**, ready for InMotion cPanel (Node.js + MySQL). Setup steps: `docs/DEPLOY.md`.
+- **Reads the punch system's monthly file** ("Month Date Wise Performance", .xls). Tested on the real September 2026 file: 22 people, 660 days.
+- **Fully automatic, no approvals.** Holidays, joiners and leavers, HR emails and late punches are applied by the tool. Every change is logged and the original data is kept.
+- **HR emails** at hr@amipi.com (Outlook) are read by Claude. Attendance files sent as attachments are imported automatically.
+- **Reminders** go to employees, a daily summary to HR, and alerts for long absences and likely device problems.
+- **Month close:** the Excel package (summary, master sheet, daily detail, issues, emails, change log) is saved on the site and emailed to the people you choose. If a newer file arrives later, a revised version is sent.
+- **Holiday calendars** from HR's lists: US holidays (NY office and remote), NY shift (India), India day shift, and Mumbai office.
 
-| Before | Now |
-|---|---|
-| HR confirms each email match | Tool matches the email to the person and date and updates the record |
-| HR approves each correction | Tool applies the correction and logs it |
-| HR locks the month | Tool closes the month automatically on a set date |
+## What the September file showed
 
-Nothing is ever deleted or overwritten. The original data is kept, and every change is logged:
-what changed, when, why, and what caused it (for example "sick-leave email from X on 3 Feb").
-Anyone can look back at the log at any time.
+- **One remote employee's "0 hours"** is a missing punch-out almost every day, not missing work.
+- **The punch system's own "late" flags are unreliable.** Everyone on shift E1 is marked late every day. The tool measures lateness against its own shift table instead.
+- **Two long absences:** one person was absent all 21 working days, another for 6 days in a row. Either set a leaving date, or the tool keeps them as "Long absence".
+- **Labor Day (7 Sep)** was marked as a holiday for most staff, but three remote staff worked that day. The tool notes this instead of counting it as a problem.
+- **Mumbai and New York** are not in the punch file. They need their own source later.
 
-Two safety rules stay in, because they cost nothing and avoid unfair results:
-- If an email match is unclear, the tool marks the day "Communicated - unclear" instead of guessing. It is still tracked.
-- Problems are labelled "Needs attention", never "Offence". If many people miss a punch on the same day in the same office, the tool labels it "Likely system issue".
+## What I still need from you
 
-## What the tool will do, every day, by itself
+1. **Deploy access:** do the steps in `docs/DEPLOY.md`, or give me what is needed and I'll walk you through it.
+2. **Microsoft 365 admin** to register the app for hr@amipi.com (`docs/DEPLOY.md`, step 6).
+3. **Claude API key** from console.anthropic.com (step 7).
+4. **Shift times:** the 7 shift codes (G, D, S1, E1, E4, G2, P1) are estimated from September data. Jainam should confirm them on the Rules page.
+5. **Holiday dates to confirm:** Mumbai's Diwali week, Mumbai's Paryushan last day (not added yet), and whether US Independence Day (Sat 4 Jul) had a Friday off.
+6. **Employee emails and joining dates**, so reminders reach people and new joiners are handled correctly.
+7. **Who receives the monthly report.**
 
-1. Collect the attendance files from each office and the remote logins.
-2. Read new emails at hr@amipi.com and match them to the person and date.
-3. Check every day against the rules and holidays, and list problems.
-4. Email employees about their own missing punches, and send a daily summary to HR (for information only).
+## Open questions (only if they matter)
 
-## What it will do at month-end, by itself
-
-1. Build the master attendance Excel file.
-2. Build the exception report.
-3. Build a short management summary (patterns, repeat issues, comparison with last month).
-4. Email all three to the agreed people.
-
-## What I need from you (7 things)
-
-1. **Raw attendance data.** One full month of login/logout times from each place: Indore, Mumbai, New York and remote staff. (The two files you gave me only have daily P/A codes, not times.)
-2. **Can these be downloaded automatically?** Ask Jainam: which software each office uses, and whether we can get a daily export without someone clicking a button.
-3. **The rules.** Office timings, grace period for late, half-day rule, minimum hours. A one-page note from Jainam is enough.
-4. **Employee list.** Code, name, office, shift, joining date, leaving date, email address.
-5. **Holiday lists for 2026** for India and New York.
-6. **HR mailbox access.** Is hr@amipi.com on Microsoft 365 (Outlook) or Google? Who can give access?
-7. **Founder's OK** that an AI service can read the hr@ emails (they include sick-leave details).
-
-## The only questions to ask Jainam
-
-1. Which systems record attendance in each office and for remote staff, and can they export automatically?
-2. What are the timing rules (start time, grace, half day, minimum hours)?
-3. How do you record leave today? (The system shows leave as 0 for everyone.)
-4. What do you fix by hand every month? Give your top 5 examples.
-5. Do people report absence anywhere other than hr@ email (WhatsApp, phone)?
-
-## The only questions for the founder
-
-1. Is it OK for an AI service to read HR emails, including sick leave?
-2. Who should receive the month-end reports?
-3. Where should the tool run: company server or cloud?
-
-## Build order
-
-The screens are built (see `frontend/`). They run on sample data until the backend exists.
-
-| Step | What | Needs |
-|---|---|---|
-| 1 | Read the monthly summary files and produce the exception report | Nothing more; can start now with the Jan and Feb 2026 files |
-| 2 | Read raw login/logout data and build the master file | Items 1, 3, 4, 5 |
-| 3 | Read and match HR emails automatically | Items 6, 7 |
-| 4 | Daily reminders and month-end auto-reports | Item 2 and the employee email addresses |
-| 5 | Run beside Jainam for one month and compare, then switch | Jainam's final file for that month |
-
-## What the Jan and Feb files already show
-
-- No login/logout times, so the tool cannot work out late arrivals or early exits from these files.
-- Only two groups (BT Office and Remote). No Mumbai or New York data.
-- Leave is not recorded, so sick leave and vacation show as "A" (absent).
-- New joiners and people who left show as long runs of absence.
-- 26 Jan (Republic Day) is marked present for everyone; 1 Jan is marked holiday.
-- Some people are present but show 0 or very low hours, and one person's overtime equals their total hours. These look like setup problems in the attendance software.
+- What do the punch remarks "M" and "EI" mean? (Probably "manual" and "early in".)
+- Does anyone else get the 1.25 casual paid leaves per month? Leave balances can be added once leave rules are written down.

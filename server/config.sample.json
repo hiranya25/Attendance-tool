@@ -1,0 +1,26 @@
+{
+  "appUrl": "https://attendance.example.com",
+  "timezone": "Asia/Kolkata",
+  "database": {
+    "client": "mysql2",
+    "host": "localhost",
+    "port": 3306,
+    "user": "CPANELUSER_attendance",
+    "password": "CHANGE_ME",
+    "database": "CPANELUSER_attendance"
+  },
+  "storageDir": "./storage",
+  "sessionSecret": "CHANGE_ME_TO_A_LONG_RANDOM_TEXT",
+  "microsoft": {
+    "tenantId": "",
+    "clientId": "",
+    "clientSecret": "",
+    "mailbox": "hr@amipi.com",
+    "sender": "hr@amipi.com"
+  },
+  "anthropic": {
+    "apiKey": "",
+    "model": "claude-opus-5-5"
+  },
+  "sendEmail": true
+}

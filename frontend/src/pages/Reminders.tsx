@@ -19,15 +19,15 @@ export function Reminders() {
       <div className="stats three">
         <div className="rule-card">
           <b>To employees</b>
-          <span>{s.remindersOn ? `${s.reminderAfterDays} working day after a missing punch, missing record or unexplained absence, at 10:00 local time.` : 'Turned off on the Rules page.'}</span>
+          <span>{s.remindersOn ? `${s.reminderAfterDays} working day after a missing punch or an unexplained absence, for days in the last ${s.reminderWindowDays} days. Needs the person's email on the People page.` : 'Turned off on the Rules page.'}</span>
         </div>
         <div className="rule-card">
           <b>To HR</b>
-          <span>A daily summary at {s.hrDigestTime} IST, and an alert when many people hit the same problem at once. For information only.</span>
+          <span>{s.hrDigestOn ? `A daily summary at ${s.hrDigestTime} IST to ${s.hrEmail}` : 'No daily summary'}, plus alerts for long absences and likely device problems. For information only.</span>
         </div>
         <div className="rule-card">
           <b>To management</b>
-          <span>The monthly package on day {s.closeDay} of the next month: master file, issues report and summary.</span>
+          <span>{s.reportRecipients.length ? `The monthly Excel package on day ${s.closeDay} of the next month, to ${s.reportRecipients.join(', ')}.` : 'No recipients set yet. Add them on the Rules page.'}</span>
         </div>
       </div>
       <div className="chips" role="group" aria-label="Recipient">
@@ -45,7 +45,7 @@ export function Reminders() {
                 {list.map((n) => (
                   <tr key={n.id}>
                     <td className="nowrap mono small">{fmtWhen(n.at)}</td>
-                    <td className="nowrap"><Pill tone={TONE[n.audience]}>{n.audience}</Pill> <span className="mono small">{n.to}</span></td>
+                    <td className="nowrap"><Pill tone={TONE[n.audience]}>{n.audience}</Pill> <span className="mono small">{n.to}</span>{n.sent === false && <span className="sub" title={n.error ?? ''}>Not sent: {n.error}</span>}</td>
                     <td className="wide">{n.subject}</td>
                     <td>{n.issueIds.length > 0 && <button className="btn sm" onClick={() => open({ kind: 'issue', id: n.issueIds[0] })}>View issue</button>}</td>
                   </tr>

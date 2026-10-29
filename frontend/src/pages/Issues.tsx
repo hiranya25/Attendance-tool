@@ -3,7 +3,8 @@ import { useApp } from '../store';
 import { Empty, PageHead, Panel, Sev, STATE_LABEL, StatePill } from '../components/ui';
 import { fmtDay, fmtMonth } from '../lib/format';
 import { ATTENTION } from '../lib/stats';
-import { downloadCsv } from '../lib/export';
+import { download } from '../lib/download';
+import { api } from '../api';
 import { issueRows } from '../lib/reports';
 import type { IssueState } from '../types';
 
@@ -37,7 +38,7 @@ export function Issues() {
       <PageHead
         title="Issues"
         sub={`Everything the daily check found in ${fmtMonth(data.month)}, and what happened to each one. Nothing is labelled an offence.`}
-        actions={<button className="btn sm" onClick={() => { downloadCsv(`issues-${data.month}.csv`, issueRows(data, emp, office)); toast('Issues report downloaded'); }}>Download issues report</button>}
+        actions={<button className="btn sm" onClick={() => { download(api.exportUrl(data.month, 'issues'), `issues-${data.month}.csv`, () => issueRows(data, emp, office)); toast('Download started'); }}>Download issues report</button>}
       />
       <div className="state-strip" role="group" aria-label="Filter by status">
         <button className={state === 'attention' ? 'on' : ''} onClick={() => setState('attention')}>

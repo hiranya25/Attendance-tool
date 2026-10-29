@@ -33,4 +33,4 @@ export function totals(days: DayRecord[]): DayTotals {
 export const ATTENTION: IssueState[] = ['open', 'reminded', 'unclear'];
 export const needsAttention = (x: Issue) => ATTENTION.includes(x.state);
 /** Absences with no word from the person. "Communicated, unclear" ones are not counted. */
-export const isUnexplained = (x: Issue) => x.type === 'Unexplained absence' && (x.state === 'open' || x.state === 'reminded');
+export const isUnexplained = (x: Issue) => (x.type === 'Unexplained absence' || x.type === 'Long absence') && (x.state === 'open' || x.state === 'reminded');

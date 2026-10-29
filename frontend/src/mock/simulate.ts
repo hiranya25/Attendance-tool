@@ -3,10 +3,10 @@
 // check the rules, group likely system faults, send reminders, take in late data and close the month.
 import type {
   ChangeEntry, DayRecord, Employee, Holiday, HrEmail, Issue, IssueType, MonthData, Notification,
-  Office, Settings, Severity, SourceHealth,
+  Office, Settings, Severity, Shift, SourceHealth,
 } from '../types';
 import { addDays, dayOfWeek, fmtDay, fmtMonth, fmtShort, hm, monthDates, nextMonth, dur, plural } from '../lib/format';
-import { EMPLOYEES, LATE_FIXES, OCT_EMAILS, OCT_PLANTS, OFFICES, TODAY, type Plant, type SeedEmail } from './seed';
+import { LATE_FIXES, OCT_EMAILS, OCT_PLANTS, OFFICES, TODAY, type Plant, type SeedEmail } from './seed';
 
 const NOTIFY_TYPES: IssueType[] = ['Missing punch-in', 'Missing punch-out', 'Missing record', 'Unexplained absence'];
 
@@ -27,16 +27,18 @@ export interface SimInput {
   settings: Settings;
   holidays: Holiday[];
   settingChanges: ChangeEntry[];
+  shifts: Shift[];
+  employees: Employee[];
 }
 
-export function simulateMonth({ month, settings, holidays, settingChanges }: SimInput): MonthData {
+export function simulateMonth({ month, settings, holidays, settingChanges, shifts, employees: everyone }: SimInput): MonthData {
   const dates = monthDates(month);
   const last = dates[dates.length - 1];
   const dataThrough = last < TODAY ? last : addDays(TODAY, -1);
   const isOct = month === '2026-10';
   const office = (id: string) => OFFICES.find((o) => o.id === id) as Office;
   const holidayOn = (date: string, cal: string) => holidays.find((h) => h.date === date && h.calendar === cal);
-  const employees = EMPLOYEES.filter((e) => e.joinDate <= last && (!e.exitDate || e.exitDate >= dates[0]));
+  const employees = everyone.filter((e) => (e.joinDate ?? '') <= last && (!e.exitDate || e.exitDate >= dates[0]));
 
   const records: MonthData['records'] = {};
   const changes: ChangeEntry[] = [];
@@ -51,8 +53,8 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
   // 1. Raw data as the attendance systems send it, plus the calendar and employee-list fixes.
   const holidayHits: Record<string, { name: string; cal: string; n: number }> = {};
   for (const e of employees) {
-    const o = office(e.officeId);
-    const shift = settings.shifts[o.id] ?? { start: o.shiftStart, end: o.shiftEnd };
+    const joinDate = e.joinDate ?? '2000-01-01';
+    const shift = shifts.find((x) => x.code === e.shiftCode) ?? { start: 570, end: 1110 };
     const plants = isOct ? OCT_PLANTS[e.id] ?? {} : {};
     let notEmployed = 0;
     records[e.id] = {};
@@ -61,9 +63,9 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
       const rec: DayRecord = { employeeId: e.id, date, code: 'P', scheduledStart: shift.start, scheduledEnd: shift.end };
       records[e.id][date] = rec;
       const working = !settings.weeklyOff.includes(dayOfWeek(date));
-      const hol = holidayOn(date, o.calendar);
+      const hol = holidayOn(date, e.calendarId);
       if (date > dataThrough) { rec.code = 'F'; continue; }
-      if (date < e.joinDate || (e.exitDate && date > e.exitDate)) {
+      if (date < joinDate || (e.exitDate && date > e.exitDate)) {
         rec.code = 'NE';
         if (working && !hol) { rec.original = { code: 'A' }; notEmployed++; }
         continue;
@@ -71,8 +73,8 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
       if (!working) { rec.code = 'WO'; continue; }
       if (hol) {
         rec.code = 'HL'; rec.note = hol.name; rec.original = { code: 'A' };
-        const k = `${date}|${o.calendar}`;
-        holidayHits[k] = { name: hol.name, cal: o.calendar, n: (holidayHits[k]?.n ?? 0) + 1 };
+        const k = `${date}|${e.calendarId}`;
+        holidayHits[k] = { name: hol.name, cal: e.calendarId, n: (holidayHits[k]?.n ?? 0) + 1 };
         continue;
       }
       let plant: Plant | undefined = plants[Number(date.slice(8))];
@@ -106,11 +108,11 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
       }
     }
     if (notEmployed) {
-      const joined = e.joinDate >= dates[0];
+      const joined = joinDate >= dates[0];
       addChange({
-        at: `${joined ? e.joinDate : addDays(e.exitDate as string, 1)}T06:00`, employeeId: e.id,
+        at: `${joined ? joinDate : addDays(e.exitDate as string, 1)}T06:00`, employeeId: e.id,
         from: `Absent (${plural(notEmployed, 'working day')})`, to: 'Not employed',
-        reason: joined ? `Joined on ${fmtShort(e.joinDate)}. Days before joining are not absences.` : `Left on ${fmtShort(e.exitDate as string)}. Days after leaving are not absences.`,
+        reason: joined ? `Joined on ${fmtShort(joinDate)}. Days before joining are not absences.` : `Left on ${fmtShort(e.exitDate as string)}. Days after leaving are not absences.`,
         source: 'Employee list',
       });
     }
@@ -196,7 +198,7 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
       else if (worked != null && !early && worked < end - s - g.shortHoursToleranceMinutes) {
         add('Short hours', rec.code === 'HD' ? 'low' : 'medium', `Worked ${dur(worked)} of ${dur(end - s)} scheduled.${rec.code === 'HD' ? ' Counted as a half day.' : ''}`);
       }
-      if ((rec.punches ?? 0) > g.duplicatePunchLimit) add('Duplicate punches', 'low', `${rec.punches} punches within 2 minutes of each other. Only the first and last were used.`);
+      if ((rec.punches ?? 0) > 2) add('Duplicate punches', 'low', `${rec.punches} punches within 2 minutes of each other. Only the first and last were used.`);
       if (rec.login != null && (rec.login < s - 180 || rec.login > s + 240)) add('Unusual login time', 'medium', `Login at ${hm(rec.login)} ${o.tzLabel} is far from the usual start of ${hm(s)}.`);
     }
   }
@@ -205,7 +207,7 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
   const groups: Record<string, Issue[]> = {};
   for (const x of issues) {
     if (x.type !== 'Missing punch-out' && x.type !== 'Missing punch-in' && x.type !== 'Missing record') continue;
-    const k = `${EMPLOYEES.find((e) => e.id === x.employeeId)?.officeId}|${x.date}|${x.type}`;
+    const k = `${everyone.find((e) => e.id === x.employeeId)?.officeId}|${x.date}|${x.type}`;
     (groups[k] ??= []).push(x);
   }
   for (const [k, list] of Object.entries(groups)) {
@@ -227,7 +229,7 @@ export function simulateMonth({ month, settings, holidays, settingChanges }: Sim
       if (x.state !== 'open' || !NOTIFY_TYPES.includes(x.type)) continue;
       const day = nextWorkingDay(x.date, g.reminderAfterDays, g.weeklyOff);
       if (day > TODAY) continue;
-      const emp = EMPLOYEES.find((e) => e.id === x.employeeId) as Employee;
+      const emp = everyone.find((e) => e.id === x.employeeId) as Employee;
       const at = `${day}T10:00`;
       const ask = x.type === 'Unexplained absence' ? 'please reply with the reason for your absence' : 'please reply with your actual time';
       notify({ at, to: emp.email, audience: 'Employee', subject: `Please check your attendance for ${fmtDay(x.date)} (${x.type.toLowerCase()}): ${ask}`, issueIds: [x.id] });

@@ -1,6 +1,9 @@
 # Attendance Desk (frontend)
 
-The screens for the automated attendance tool. It runs fully on sample data today, and switches to the real backend when one exists.
+The screens for the automated attendance tool (React + TypeScript + Vite). The same code runs in two ways:
+
+- **With the real server:** the normal build. It talks to `/api` (see `../server`).
+- **As a demo on sample data:** `npm run build:demo` makes one self-contained HTML file with invented people, for showing the tool without a server.
 
 The tool approves nothing by hand. It applies emails, late data, holidays and joiner/leaver dates by itself, keeps the original data, and logs every change.
 
@@ -8,17 +11,24 @@ The tool approves nothing by hand. It applies emails, late data, holidays and jo
 
 ```bash
 npm install
+```
+
+With the server running (`cd ../server && npm run dev`):
+
+```bash
 npm run dev
 ```
 
-Open the address it prints (usually http://localhost:5173).
+Or on sample data only:
 
-Other commands:
+```bash
+npm run dev:demo
+```
 
 | Command | What it does |
 |---|---|
-| `npm run build` | Production build into `dist/` |
-| `npm run build:single` | One self-contained HTML file in `dist-single/`, for sharing as a demo |
+| `npm run build` | Build for the real server into `dist/` |
+| `npm run build:demo` | One self-contained HTML file on sample data in `dist-single/` |
 | `npm run typecheck` | Type-check only |
 
 ## Screens
@@ -33,7 +43,8 @@ Other commands:
 | Reminders sent | Messages to employees, HR and management |
 | Monthly report | Trends, repeat patterns, departments, and the summary that is emailed at month close |
 | People | Employee list with join and leave dates |
-| Rules & calendars | Shifts, thresholds, email confidence, reminders, month close, holidays. Saving re-checks every month |
+| Attendance files | Upload the punch system's monthly file, and see every file received |
+| Rules & calendars | Connections, shift times, thresholds, email confidence, reminders, month close, holiday calendars, user accounts. Saving re-checks every month |
 
 ## How the code is organised
 
@@ -49,19 +60,9 @@ src/
   pages/            One file per screen, plus the side drawers.
 ```
 
-## Connecting the backend
+## Talking to the server
 
-Set `VITE_API_URL` (for example in `.env.local`) and the app calls these endpoints instead of the sample data:
-
-| Method | Path | Returns |
-|---|---|---|
-| GET | `/reference` | `Reference`: offices, employees, holidays, settings, months |
-| GET | `/months/{yyyy-mm}` | `MonthData`: records, issues, emails, changes, notifications, sources, close status |
-| GET | `/trend` | `TrendPoint[]`, one per month |
-| PUT | `/settings` | Saves `Settings`; the backend re-checks all months |
-| PUT | `/holidays` | Saves `Holiday[]` |
-
-`src/mock/simulate.ts` shows, step by step, what the backend has to do each day. It is the best starting point for writing the backend logic.
+`src/api/client.ts` lists everything the screens need. `src/api/http.ts` calls the server, and `src/mock/` is the sample-data version. The data model is in `../shared/types.ts`, shared with the server.
 
 ## Sample data
 

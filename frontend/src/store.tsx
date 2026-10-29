@@ -14,6 +14,7 @@ export interface AppState {
   data: MonthData;
   trend: TrendPoint[];
   reload: () => Promise<void>;
+  signOut: () => Promise<void>;
   open: (t: DrawerTarget) => void;
   go: (view: string) => void;
   toast: (text: string) => void;

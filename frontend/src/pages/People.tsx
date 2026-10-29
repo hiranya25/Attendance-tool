@@ -7,11 +7,17 @@ import { needsAttention, totals } from '../lib/stats';
 export function People() {
   const { data, ref, office, open } = useApp();
   const [q, setQ] = useState('');
-  const list = ref.employees.filter((e) => !q || `${e.name} ${e.department} ${e.id}`.toLowerCase().includes(q.toLowerCase()));
+  const list = ref.employees.filter((e) => !q || `${e.name} ${e.department} ${e.id} ${e.aliases}`.toLowerCase().includes(q.toLowerCase()));
+  const missingEmail = ref.employees.filter((e) => !e.email && !e.exitDate).length;
+  const calName = Object.fromEntries(ref.calendars.map((c) => [c.id, c.name]));
+  const shiftOf = Object.fromEntries(ref.shifts.map((s) => [s.code, s]));
 
   return (
     <>
-      <PageHead title="People" sub="The employee list the tool works from. Joining and leaving dates stop new joiners and leavers showing up as absent." />
+      <PageHead title="People" sub="The employee list the tool works from. New people are added automatically from the attendance file. Click a person to edit their details." />
+      {missingEmail > 0 && (
+        <p className="note">{missingEmail} {missingEmail === 1 ? 'person has' : 'people have'} no email address yet, so reminders cannot reach them. Add it by clicking the person.</p>
+      )}
       <div className="filters">
         <input id="ppl-q" type="search" placeholder="Find a person or department" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a person or department" />
         <span className="muted small">{list.length} people</span>
@@ -20,25 +26,23 @@ export function People() {
         <div className="scroll">
           <table>
             <thead>
-              <tr><th>Code</th><th>Name</th><th>Office</th><th>Department</th><th>Shift</th><th>Joined</th><th>Status</th><th className="num">Present rate</th><th className="num">Hours</th><th className="num">Need attention</th></tr>
+              <tr><th>Code</th><th>Name</th><th>Office</th><th>Shift</th><th>Holidays</th><th>Status</th><th className="num">Present rate</th><th className="num">Hours</th><th className="num">Need attention</th></tr>
             </thead>
             <tbody>
               {list.map((e) => {
                 const days = data.records[e.id] ? Object.values(data.records[e.id]) : [];
                 const t = totals(days);
-                const o = office(e.officeId);
-                const shift = ref.settings.shifts[o.id];
+                const shift = shiftOf[e.shiftCode];
                 const n = data.issues.filter((x) => x.employeeId === e.id && needsAttention(x)).length;
                 return (
                   <tr key={e.id} className="click" onClick={() => open({ kind: 'person', employeeId: e.id })} tabIndex={0} onKeyDown={(ev) => ev.key === 'Enter' && open({ kind: 'person', employeeId: e.id })}>
                     <td className="mono small">{e.id}</td>
-                    <td className="nowrap"><b>{e.name}</b><span className="sub mono">{e.email}</span></td>
-                    <td>{o.name}</td>
-                    <td>{e.department}</td>
-                    <td className="mono small nowrap">{hm(shift.start)}–{hm(shift.end)} {o.tzLabel}</td>
-                    <td className="nowrap">{fmtShort(e.joinDate)} {e.joinDate.slice(0, 4)}</td>
-                    <td>{e.exitDate ? <Pill tone="mute">Left {fmtShort(e.exitDate)}</Pill> : e.joinDate.slice(0, 7) === data.month ? <Pill tone="accent">New joiner</Pill> : <Pill tone="ok">Active</Pill>}</td>
-                    <td className="num">{days.length ? pct(t.rate) : '—'}</td>
+                    <td className="nowrap"><b>{e.name}</b><span className="sub mono">{e.email || 'No email yet'}</span></td>
+                    <td>{office(e.officeId)?.name ?? e.officeId}<span className="sub">{e.department}</span></td>
+                    <td className="mono small nowrap">{shift ? `${e.shiftCode} ${hm(shift.start)}–${hm(shift.end)}` : e.shiftCode || '—'}</td>
+                    <td className="small">{calName[e.calendarId] ?? '—'}</td>
+                    <td>{e.exitDate ? <Pill tone="mute">Left {fmtShort(e.exitDate)}</Pill> : e.joinDate && e.joinDate.slice(0, 7) === data.month ? <Pill tone="accent">New joiner</Pill> : <Pill tone="ok">Active</Pill>}</td>
+                    <td className="num">{t.workdays ? pct(t.rate) : '—'}</td>
                     <td className="num mono">{days.length ? hhmm(t.minutes) : '—'}</td>
                     <td className="num">{n || <span className="muted">0</span>}</td>
                   </tr>

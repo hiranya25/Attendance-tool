@@ -3,7 +3,8 @@ import { useApp } from '../store';
 import { CODE_LABEL, PageHead, Panel } from '../components/ui';
 import { dayOfWeek, dowLetter, fmtDay, fmtMonth, hhmm, monthDates } from '../lib/format';
 import { needsAttention, totals } from '../lib/stats';
-import { downloadCsv } from '../lib/export';
+import { download } from '../lib/download';
+import { api } from '../api';
 import { dailyRows, masterRows } from '../lib/reports';
 import type { DayCode, DayRecord } from '../types';
 
@@ -31,14 +32,14 @@ export function Attendance() {
         sub={`${fmtMonth(data.month)}, every office in one sheet. Click any day to see times and history.`}
         actions={
           <>
-            <button className="btn sm" onClick={() => { downloadCsv(`attendance-${data.month}.csv`, masterRows(data, emp, office)); toast('Master file downloaded'); }}>Download master file</button>
-            <button className="btn sm" onClick={() => { downloadCsv(`attendance-daily-${data.month}.csv`, dailyRows(data, emp, office)); toast('Daily detail downloaded'); }}>Download daily times</button>
+            <button className="btn sm" onClick={() => { download(api.exportUrl(data.month, 'master'), `attendance-${data.month}.csv`, () => masterRows(data, emp, office)); toast('Download started'); }}>Download master file</button>
+            <button className="btn sm" onClick={() => { download(api.exportUrl(data.month, 'all'), `attendance-daily-${data.month}.csv`, () => dailyRows(data, emp, office)); toast('Download started'); }}>Download full workbook</button>
           </>
         }
       />
       <div className="filters">
         <div className="chips" role="group" aria-label="Office">
-          {[{ id: 'all', name: 'All offices' }, ...ref.offices].map((o) => (
+          {[{ id: 'all', name: 'All offices' }, ...ref.offices.filter((o) => ref.employees.some((e) => e.officeId === o.id))].map((o) => (
             <button key={o.id} className={`chip${off === o.id ? ' on' : ''}`} onClick={() => setOff(o.id)} aria-pressed={off === o.id}>{o.name}</button>
           ))}
         </div>

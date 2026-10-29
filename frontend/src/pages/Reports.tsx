@@ -5,7 +5,7 @@ import { BarChart } from '../components/BarChart';
 import { Empty, PageHead, Panel, Pill, Stat } from '../components/ui';
 import { fmtDay, fmtMonth, fmtMonthShort, fmtWhen, pct, plural } from '../lib/format';
 import { isUnexplained, needsAttention, totals } from '../lib/stats';
-import { downloadCsv } from '../lib/export';
+import { download } from '../lib/download';
 import { issueRows, masterRows } from '../lib/reports';
 import type { Issue, MonthData } from '../types';
 
@@ -50,28 +50,32 @@ export function Reports() {
   const attention = data.issues.filter(needsAttention);
 
   const summary = [
-    `${fmtMonth(data.month)}: present rate ${pct(cur?.presentRate ?? 0)} across ${plural(Object.keys(data.records).length, 'person', 'people')} in ${ref.offices.length} locations.`,
+    `${fmtMonth(data.month)}: present rate ${pct(cur?.presentRate ?? 0)} across ${plural(Object.keys(data.records).length, 'person', 'people')} in ${new Set(Object.keys(data.records).map((id) => emp(id).officeId)).size} locations.`,
     `${plural(data.issues.length, 'item')} found. The tool handled ${data.issues.length - attention.length} by itself (emails, late data, likely system issues). ${attention.length} still need attention.`,
     `${plural(data.emails.filter((m) => m.outcome === 'applied').length, 'email')} applied automatically, ${data.emails.filter((m) => m.outcome === 'unclear').length} kept as communicated but unclear.`,
     rows.length ? `${plural(rows.length, 'person', 'people')} show a repeat pattern this month${rows.some((r) => r.lastMonth === 'Yes') ? `, ${rows.filter((r) => r.lastMonth === 'Yes').length} of them also last month` : ''}.` : 'No repeat patterns this month.',
-    ...data.sources.filter((s) => !s.ok).map((s) => `${s.name}: ${s.note}`),
+    ...data.sources.filter((s) => !s.ok && s.state !== 'off').map((s) => `${s.name}: ${s.note}`),
   ];
+
+  const recipients = ref.settings.reportRecipients.join(', ');
 
   return (
     <>
       <PageHead
         title="Monthly report"
         sub={data.close.closed
-          ? `Closed automatically ${fmtWhen(data.close.closesAt)} and emailed to ${data.close.reportsSentTo.join(', ')}.`
-          : `Builds itself as the month goes. Closes automatically ${fmtDay(data.close.closesAt)} at 06:00 and is emailed to ${ref.settings.reportRecipients.join(', ')}.`}
+          ? `Closed automatically ${fmtWhen(data.close.closesAt)}${data.close.reportsSentTo.length ? ` and emailed to ${data.close.reportsSentTo.join(', ')}` : ''}.`
+          : `Builds itself as the month goes. Closes automatically ${fmtDay(data.close.closesAt)}${recipients ? ` and is emailed to ${recipients}` : ''}.`}
         actions={
           <>
-            <button className="btn sm" onClick={() => { downloadCsv(`attendance-${data.month}.csv`, masterRows(data, emp, office)); toast('Master file downloaded'); }}>Master file</button>
-            <button className="btn sm" onClick={() => { downloadCsv(`issues-${data.month}.csv`, issueRows(data, emp, office)); toast('Issues report downloaded'); }}>Issues report</button>
-            <button className="btn sm" onClick={() => { downloadCsv(`summary-${data.month}.csv`, [['Summary'], ...summary.map((s) => [s])]); toast('Summary downloaded'); }}>Summary</button>
+            <button className="btn sm pri" onClick={() => { download(api.exportUrl(data.month, 'all'), `attendance-${data.month}.csv`, () => masterRows(data, emp, office)); toast('Download started'); }}>Download full workbook</button>
+            <button className="btn sm" onClick={() => { download(api.exportUrl(data.month, 'master'), `attendance-${data.month}.csv`, () => masterRows(data, emp, office)); toast('Download started'); }}>Master file</button>
+            <button className="btn sm" onClick={() => { download(api.exportUrl(data.month, 'issues'), `issues-${data.month}.csv`, () => issueRows(data, emp, office)); toast('Download started'); }}>Issues report</button>
           </>
         }
       />
+      {!recipients && <p className="note">No one is set to receive the monthly package yet. Add email addresses on the Rules page under “Month close and reports”.</p>}
+      <SavedReports />
       <div className="stats">
         <Stat label="Present rate" value={pct(cur?.presentRate ?? 0)} sub={delta(cur?.presentRate ?? 0, last?.presentRate, '%')} />
         <Stat label="Items found" value={cur?.issues ?? 0} sub={delta(cur?.issues ?? 0, last?.issues)} />
@@ -144,4 +148,42 @@ export function Reports() {
 function prevMonth(m: string) {
   const [y, mo] = m.split('-').map(Number);
   return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`;
+}
+
+/** Every package the tool has built for this month, kept on the server. */
+function SavedReports() {
+  const { data, ref, reload, toast } = useApp();
+  const [busy, setBusy] = useState(false);
+  const reports = data.close.reports ?? [];
+  async function buildNow() {
+    setBusy(true);
+    try {
+      const r = await api.buildPackage(data.month);
+      await reload();
+      toast(`Version ${r.version} built${ref.settings.reportRecipients.length ? ' and emailed' : ''}`);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Panel
+      title="Saved monthly packages"
+      note="Each package is an Excel workbook: summary, master sheet, daily detail, issues, HR emails and change log."
+      actions={ref.user?.role === 'admin' && data.hasData !== false && <button className="btn sm" onClick={buildNow} disabled={busy}>{busy ? 'Building…' : 'Build and email now'}</button>}
+      flush
+    >
+      {reports.length ? (
+        <ul className="list">
+          {reports.map((r) => (
+            <li key={r.id} className="list-row static">
+              <span className="grow"><b>Version {r.version}</b> <span className="muted small">{fmtWhen(r.createdAt)}</span><span className="sub">{r.note}{r.sentTo.length ? `. Sent to ${r.sentTo.join(', ')}` : '. Not emailed (no recipients set)'}</span></span>
+              <button className="btn sm" onClick={() => download(api.reportUrl(r.id), '', () => [])}>Download</button>
+            </li>
+          ))}
+        </ul>
+      ) : <Empty>{data.close.closed ? 'No package saved.' : `No package yet. The first one is built when the month closes on ${fmtDay(data.close.closesAt)}.`}</Empty>}
+    </Panel>
+  );
 }
