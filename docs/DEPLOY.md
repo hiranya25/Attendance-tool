@@ -5,7 +5,7 @@ This guide takes about an hour the first time. You need:
 - someone who can sign in to Microsoft 365 as an admin (for step 6),
 - a Claude API key (step 7).
 
-The app is a Node.js app with a MySQL database. Everything is bundled, so the server never needs `npm install`.
+The app is a Node.js app with a PostgreSQL database. Everything is bundled, so the server never needs `npm install`.
 
 ## 1. Build the upload package
 
@@ -27,12 +27,14 @@ This creates `deploy/out/attendance-desk.zip`. It contains:
 
 ## 2. Create the database
 
-1. In cPanel, open **MySQL Databases**.
+1. In cPanel, open **PostgreSQL Databases**.
 2. Create a database, for example `attendance`. cPanel names it `CPANELUSER_attendance`.
-3. Create a user with a strong password.
-4. Add the user to the database and tick **All privileges**.
+3. Create a user with a strong password, for example `attendance`. cPanel names it `CPANELUSER_attendance`.
+4. Under **Add User to Database**, add that user to the database. This gives it full access to that database.
 
 Write down the database name, user name and password. The app creates its own tables the first time it starts.
+
+The app can also use MySQL, if you ever move hosts. In `config.json`, set `"client": "mysql2"` and `"port": 3306`.
 
 ## 3. Create the address
 
@@ -50,7 +52,7 @@ Make sure it has an SSL certificate (cPanel's **SSL/TLS Status**, then **Run Aut
 | Setting | Value |
 |---|---|
 | `appUrl` | `https://attendance.amipi.com` |
-| `database.user`, `database.password`, `database.database` | From step 2 |
+| `database.user`, `database.password`, `database.database` | From step 2. Leave `client` as `pg`, `host` as `localhost` and `port` as `5432` |
 | `sessionSecret` | Any long random text (40+ characters) |
 | `microsoft` | Leave empty for now. Step 6 fills it in. |
 | `anthropic.apiKey` | Leave empty for now. Step 7 fills it in. |
@@ -76,6 +78,14 @@ Keep `config.json` private. It holds passwords and must never go inside `public_
 5. Go to **Attendance files** and upload the latest "Month Date Wise Performance" export.
 
 If the page does not load, the error is in `attendance-desk/stderr.log` (cPanel writes it there).
+
+If that log says **"permission denied for schema public"**, the database user is not allowed to create tables yet. This happens on newer PostgreSQL versions. Ask InMotion support to run this, using your real names:
+
+```sql
+GRANT ALL ON SCHEMA public TO CPANELUSER_attendance;
+```
+
+Then restart the app.
 
 ### The automatic run (cron job)
 

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { db } from '../db.ts';
+import { db, insertId } from '../db.ts';
 import { now, storage } from '../config.ts';
 import { getOffices } from '../repo.ts';
 import { readPunchReport, type RawDay } from './punchReport.ts';
@@ -23,7 +23,7 @@ export async function importPunchFile(buf: Buffer, fileName: string, source: 'up
     for (const month of report.months) {
       const days = report.days.filter((d) => d.date.startsWith(month));
       const people = new Set(days.map((d) => d.emp_code)).size;
-      const [id] = await trx('imports').insert({ month, file_name: fileName, stored_path: dest, source, imported_at: at, imported_by: by, people, days: days.length });
+      const id = await insertId(trx, 'imports', { month, file_name: fileName, stored_path: dest, source, imported_at: at, imported_by: by, people, days: days.length });
       for (let i = 0; i < days.length; i += 200) await trx('raw_days').insert(days.slice(i, i + 200).map((d) => ({ import_id: id, ...d })));
       await trx('audit').insert({
         at, user_name: by, subject: 'Attendance file', emp_code: null, date: month, from_val: '', to_val: `Imported ${fileName}`.slice(0, 500),

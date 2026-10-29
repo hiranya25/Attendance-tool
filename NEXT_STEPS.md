@@ -4,7 +4,7 @@ Updated 29 Oct 2026.
 
 ## Built and tested
 
-- **Screens and server**, ready for InMotion cPanel (Node.js + MySQL). Setup steps: `docs/DEPLOY.md`.
+- **Screens and server**, ready for InMotion cPanel (Node.js + PostgreSQL). Setup steps: `docs/DEPLOY.md`.
 - **Reads the punch system's monthly file** ("Month Date Wise Performance", .xls). Tested on the real September 2026 file: 22 people, 660 days.
 - **Fully automatic, no approvals.** Holidays, joiners and leavers, HR emails and late punches are applied by the tool. Every change is logged and the original data is kept.
 - **HR emails** at hr@amipi.com (Outlook) are read by Claude. Attendance files sent as attachments are imported automatically.

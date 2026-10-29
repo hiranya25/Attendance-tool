@@ -2,9 +2,9 @@
   "appUrl": "https://attendance.example.com",
   "timezone": "Asia/Kolkata",
   "database": {
-    "client": "mysql2",
+    "client": "pg",
     "host": "localhost",
-    "port": 3306,
+    "port": 5432,
     "user": "CPANELUSER_attendance",
     "password": "CHANGE_ME",
     "database": "CPANELUSER_attendance"

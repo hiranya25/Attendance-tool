@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import type { User } from '../../../shared/types.ts';
 import { config, localStamp, now } from '../config.ts';
-import { db } from '../db.ts';
+import { db, insertId } from '../db.ts';
 
 const COOKIE = 'attendance_desk';
 const DAYS = 14;
@@ -81,8 +81,7 @@ export async function createUser(name: string, email: string, password: string, 
   if (!String(name ?? '').trim()) throw new HttpError(400, 'Enter a name.');
   const k = await db();
   if (await k('users').where({ email }).first()) throw new HttpError(400, 'Someone with that email already has an account.');
-  const [id] = await k('users').insert({ email, name: name.trim(), pass_hash: hashPassword(password), role: role === 'admin' ? 'admin' : 'viewer', created_at: now() });
-  return Number(id);
+  return insertId(k, 'users', { email, name: name.trim(), pass_hash: hashPassword(password), role: role === 'admin' ? 'admin' : 'viewer', created_at: now() });
 }
 
 /** Route guards. Changes also need the X-Requested-With header, which a form on another site cannot send. */

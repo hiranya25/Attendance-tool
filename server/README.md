@@ -40,7 +40,7 @@ src/
   app.ts, server.ts      Start file and the Express app (API under /api, screens from ./public)
   cron.ts                The 15-minute automatic run
   cli.ts                 Server terminal commands (import a file, add a user, run once)
-  config.ts, db.ts       config.json, and the database (MySQL in production, SQLite locally)
+  config.ts, db.ts       config.json, and the database (PostgreSQL on the server, SQLite locally; MySQL also works)
   schema.ts, seed.ts     Tables, plus the starting calendars, shift times and rules
   import/                Reader for the punch system's .xls/.xlsx export, and the importer
   engine/monthBuilder.ts Builds a month from the raw rows: calendars, joiners/leavers, emails, rules, reminders

@@ -7,7 +7,7 @@ It takes in the punch system's monthly file (uploaded, or emailed to hr@amipi.co
 | Folder | What it is |
 |---|---|
 | `frontend/` | The screens (React + TypeScript). See `frontend/README.md`. |
-| `server/` | The server (Node.js + TypeScript, MySQL). See `server/README.md`. |
+| `server/` | The server (Node.js + TypeScript, PostgreSQL). See `server/README.md`. |
 | `shared/` | The data model both use. |
 | `deploy/` | `build.sh` makes the upload package for cPanel. |
 | `docs/DEPLOY.md` | Step-by-step setup on InMotion cPanel. |
@@ -15,7 +15,7 @@ It takes in the punch system's monthly file (uploaded, or emailed to hr@amipi.co
 
 ## Run it on your own computer
 
-This runs the full tool, with sign-in, uploads, rules and the Excel workbook, on your computer only. It uses a small local database file instead of MySQL, and sends no emails.
+This runs the full tool, with sign-in, uploads, rules and the Excel workbook, on your computer only. It uses a small local database file instead of PostgreSQL, and sends no emails.
 
 ### 1. Install the tools (once)
 

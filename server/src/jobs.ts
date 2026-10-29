@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Employee } from '../../shared/types.ts';
 import { config, now, storage, today } from './config.ts';
-import { db } from './db.ts';
+import { db, insertId } from './db.ts';
 import * as R from './repo.ts';
 import * as D from './engine/dates.ts';
 import { buildMonth, issueKey, NOTIFY_TYPES } from './engine/monthBuilder.ts';
@@ -196,7 +196,7 @@ export async function buildPackage(month: string, note: string) {
   const name = `Attendance-${month}-v${version}.xlsx`;
   const file = path.join(storage(`reports/${month}`), name);
   fs.writeFileSync(file, await writeWorkbook(data, employees, offices));
-  const [id] = await k('reports').insert({ month, version, path: file, created_at: now(), sent_to: JSON.stringify(r.reportRecipients), note });
+  const id = await insertId(k, 'reports', { month, version, path: file, created_at: now(), sent_to: JSON.stringify(r.reportRecipients), note });
   const lines = summaryLines(data, Object.fromEntries(employees.map((e) => [e.id, e])));
   const subject = `Attendance ${D.monthName(month)}${version > 1 ? ` (revised, version ${version})` : ''}`;
   const html = layout(subject, `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul><p>The full workbook is attached: summary, master sheet, daily detail, issues, HR emails and change log. It is also saved in Attendance Desk under Monthly report.</p>`);

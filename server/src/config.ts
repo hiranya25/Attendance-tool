@@ -4,7 +4,7 @@ import path from 'node:path';
 export interface AppConfig {
   appUrl: string;
   timezone: string;
-  database: { client: 'mysql2' | 'better-sqlite3'; host?: string; port?: number; user?: string; password?: string; database?: string; filename?: string };
+  database: { client: 'pg' | 'mysql2' | 'better-sqlite3'; host?: string; port?: number; user?: string; password?: string; database?: string; filename?: string };
   storageDir: string;
   sessionSecret: string;
   microsoft: { tenantId: string; clientId: string; clientSecret: string; mailbox: string; sender: string };
@@ -25,7 +25,7 @@ export function config(): AppConfig {
   cached = {
     appUrl: '', timezone: 'Asia/Kolkata', storageDir: './storage', sessionSecret: '', sendEmail: true,
     ...raw,
-    database: { client: 'mysql2', ...raw.database },
+    database: { client: 'pg', ...raw.database },
     microsoft: { tenantId: '', clientId: '', clientSecret: '', mailbox: 'hr@amipi.com', sender: 'hr@amipi.com', ...raw.microsoft },
     anthropic: { apiKey: '', model: 'claude-opus-5-5', ...raw.anthropic },
   } as AppConfig;

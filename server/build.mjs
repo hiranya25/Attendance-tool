@@ -2,7 +2,7 @@
 // so the cPanel server does not need to run npm install.
 import { build } from 'esbuild';
 
-const optional = ['better-sqlite3', 'sqlite3', 'pg', 'pg-query-stream', 'oracledb', 'tedious', 'mysql', 'pg-native'];
+const optional = ['better-sqlite3', 'sqlite3', 'pg-query-stream', 'oracledb', 'tedious', 'mysql', 'pg-native'];
 for (const name of ['app', 'cron', 'cli']) {
   await build({
     entryPoints: [`src/${name}.ts`],
