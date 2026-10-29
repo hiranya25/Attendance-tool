@@ -2,136 +2,136 @@
 
 Updated 29 Oct 2026. The tool runs by itself: no HR approvals anywhere. Every change it makes is logged and the original data is always kept.
 
-## Status (29 Oct 2026)
+## Where we are
 
-| Phase | Status |
+**Built and tested** (on the real September 2026 punch file):
+
+| Part | What it does |
 |---|---|
-| 0. Inputs | Mostly in: the punch file, holiday lists, Outlook confirmed, AI approved. Still open: shift times, employee emails, report recipients |
-| 1. First real version | **Built.** Server, database, file import, screens on real data, Excel downloads |
-| 2. Daily data | **Built for the monthly punch file** (upload or email). Mumbai and New York sources are still to come |
-| 3. HR emails | **Built.** Waits for the Microsoft 365 app registration and the Claude API key |
-| 4. Reminders and alerts | **Built.** Waits for Microsoft 365 and employee email addresses |
-| 5. Month close and reports | **Built and tested** on September 2026 |
-| 6. Go live | **Next:** deploy on InMotion cPanel (`docs/DEPLOY.md`), then run one month next to Jainam |
+| Screens | Overview, master attendance, issues, HR emails, change log, reminders, monthly report, people, attendance files, rules and calendars, sign-in |
+| Server | Node.js + MySQL, ready for InMotion cPanel. Bundled, so the server needs no `npm install` |
+| File import | Reads the punch system's "Month Date Wise Performance" export, uploaded on the site or emailed to hr@amipi.com |
+| Rules | Late, early, short hours, missing punches, absences, long absences, and likely device faults, measured against an editable shift table |
+| Calendars | HR's 2026 lists: US holidays, NY shift (India), India day shift, Mumbai office |
+| HR emails | Claude reads hr@amipi.com (Outlook) and applies leave and late notes automatically |
+| Messages | Employee reminders, HR daily summary, alerts for long absences and device problems |
+| Month close | Excel package saved on the site and emailed. A revised version is sent if a newer file arrives |
 
-The original plan follows for reference.
-
-**Total time:** about 14 weeks from the day the inputs arrive. Each phase ends with something you can see and use.
-
----
-
-## Phase 0: Collect the inputs (week 1)
-
-**Owner:** you, with Jainam and the founder.
-
-- Answers to the 8 questions in `NEXT_STEPS.md`.
-- The 7 items: one month of login/logout data per office, how each system exports, the timing rules, the employee list, the 2026 holiday lists, HR mailbox details, and the founder's OK for AI to read HR emails.
-- Jainam's final attendance file for the same month, so we can compare results later.
-
-**Done when:** all of the above is in one shared folder.
+**Not live yet.** The remaining work is mostly setup and checking, not building.
 
 ---
 
-## Phase 1: First real version (weeks 2 to 3)
+## Phase 1: Put it online (week of 2 Nov)
 
-**What gets built**
-- The backend (the "engine room"), with a database that keeps original data untouched.
-- Employee list, holiday calendars and timing rules loaded in.
-- A reader for the monthly summary files you already have (like the Jan and Feb 2026 files).
-- The screens connected to real data instead of sample data.
-- Downloadable master attendance file and issues report in Excel.
+**Owner:** you, or whoever manages the InMotion account. I can guide you through each step.
 
-**Done when:** you can upload the Jan and Feb 2026 files and see the real master sheet, issues and change log in the tool.
+1. Run `bash deploy/build.sh` to make the upload zip.
+2. In cPanel: create the MySQL database, the subdomain (for example attendance.amipi.com) and its SSL certificate.
+3. Upload the zip, fill in `config.json`, and start it with **Setup Node.js App**.
+4. Add the cron job that runs every 15 minutes.
+5. Create your admin account and upload the September file.
 
----
+Keep `"sendEmail": false` for now, so nothing is emailed yet.
 
-## Phase 2: Daily attendance data (weeks 4 to 6)
+**Done when:** you can sign in at the new address and see September's data.
 
-**What gets built**
-- One reader per source: Indore, Mumbai, New York and the remote tracker.
-- An automatic collection every morning at 06:00 IST.
-- Login/logout checks: late, early, missing punch, short hours, duplicates and odd login times, each in the office's own time zone.
-- "Likely system issue" when many people in one office have the same gap on the same day.
-- Late punches that arrive later fill in the gap automatically.
-
-**Depends on:** how each system exports data. If a system can only export by hand, someone drops the file in a shared folder each day and the tool picks it up.
-
-**Done when:** the tool updates itself each morning with no one touching it.
+Full steps: `docs/DEPLOY.md`, steps 1 to 5.
 
 ---
 
-## Phase 3: HR emails (weeks 7 to 8)
+## Phase 2: Connect Outlook and Claude (week of 2 Nov, can run alongside Phase 1)
 
-**What gets built**
-- A connection to hr@amipi.com (Outlook or Google).
-- AI reads each email and works out the person, the days and the type (sick, planned, unpaid, late, early).
-- At 80% match confidence or more, attendance is updated automatically. Below that, the day is marked "Communicated, unclear".
-- Emails that are not about attendance are ignored.
+**Owner:** your Microsoft 365 admin (about 10 minutes), and you for the Claude key.
 
-**Depends on:** the founder's OK and mailbox access.
+1. Register the "Attendance Desk" app in Microsoft Entra with the `Mail.Read` and `Mail.Send` permissions, ideally limited to the hr@amipi.com mailbox only.
+2. Create a Claude API key at console.anthropic.com, with a monthly spend limit if wanted.
+3. Put both into `config.json`, restart the app, and click **Run checks now**.
 
-**Done when:** a test email to hr@ shows up in the tool and changes the right day within minutes.
+**Done when:** the Rules page shows Outlook and Claude as **Connected**. A test email to hr@ ("I'm on sick leave tomorrow") then appears on the HR emails page, matched to the right person and day.
 
----
-
-## Phase 4: Reminders and alerts (week 9)
-
-**What gets built**
-- An email to the employee the next working day about a missing punch or an unexplained absence.
-- A daily summary email to HR (for information only).
-- An alert to HR when a device or sync problem is likely.
-
-**Done when:** reminders go out on their own and replies come back into the tool through the hr@ mailbox.
+Full steps: `docs/DEPLOY.md`, steps 6 and 7.
 
 ---
 
-## Phase 5: Month close and reports (week 10)
+## Phase 3: Fill in what the tool cannot guess (weeks of 2 and 9 Nov)
 
-**What gets built**
-- Automatic month close on the 1st at 06:00.
-- An email package to the agreed people: master Excel file, issues report and management summary.
-- Trends against earlier months, repeat patterns, and department and office summaries.
+**Owner:** you and Jainam, all done on the screens.
 
-**Done when:** the October or November package arrives in your inbox with no one pressing a button.
+| What | Where | Why it matters |
+|---|---|---|
+| Confirm the 7 shift times (G, D, S1, E1, E4, G2, P1) | Rules, Shift timings | Late and early flags depend on them. They are estimated today |
+| Employee email addresses | People | Reminders cannot reach anyone without them |
+| Joining and leaving dates | People | Stops new joiners and leavers showing up as absent |
+| Nicknames used in emails | People | Helps Claude match emails like "Jolly" or "Anna" |
+| Mumbai Diwali week and Paryushan date, and any observed days | Rules, Holiday calendars | Currently marked "Check date" or missing |
+| Who receives the monthly report | Rules, Month close and reports | Nobody is set yet |
 
----
-
-## Phase 6: Go live (weeks 11 to 14)
-
-**What gets built**
-- Hosting on a company server or in the cloud (founder's choice).
-- Login, so each person sees only what they should: HR and management see everything, managers see their team.
-- Daily backups.
-
-**Trial run:** Jainam keeps doing the month by hand while the tool runs alongside for one full month. We compare the two results and fix any differences.
-
-**Done when:** the tool's month matches Jainam's (or the differences are understood), and you switch over. Jainam moves from doing the work to checking the results.
+**Done when:** the shift table shows every shift as "Confirmed", and the People page shows no "No email yet".
 
 ---
 
-## After go-live (ongoing, a few minutes a month)
+## Phase 4: Trial month alongside Jainam (November 2026)
 
-- Add new joiners and leavers to the employee list (or have it sync from HR records).
-- Upload next year's holiday lists each December.
-- Adjust rules on the Rules page if policy changes. Every change is logged.
+**Owner:** Jainam, with me fixing anything that differs.
+
+1. Upload the October file when it is ready. Jainam keeps doing October and November by hand as usual.
+2. Compare the tool's monthly workbook with Jainam's final file, person by person.
+3. Fix any differences on the Rules page (shift times, grace period, calendars), or tell me and I change the logic.
+4. Halfway through the month, set `"sendEmail": true`. Start with report recipients and HR only, then switch on employee reminders.
+
+**Done when:** October and November match Jainam's results, or every difference is understood and agreed.
+
+**Important limit:** reminders only help while the month is still running. If the punch file only comes once a month, reminders about old days are skipped (the Rules page sets the window, 7 days by default). For timely reminders, ask whether the punch system can export weekly or daily, or send the file to hr@ more often.
+
+---
+
+## Phase 5: Switch over (December 2026)
+
+- The tool closes November on its own (3 Dec by default) and emails the package.
+- Jainam moves from doing the work to checking the tool's results and the "Needs attention" list.
+- Keep the manual method for one more month as a safety net, then stop.
+
+**Done when:** a month closes with nobody pressing a button, and HR and management use the emailed package.
+
+---
+
+## Phase 6: After go-live (from January 2027, as needed)
+
+| Addition | What is needed first |
+|---|---|
+| Mumbai office attendance | Which system Mumbai uses, and a sample export |
+| New York office attendance | The same, for New York |
+| More frequent punch data (weekly or daily) | Whether the punch system can export or email automatically |
+| Leave balances (1.25 casual paid leaves per month worked, 1 if under a year) | Written leave rules and opening balances |
+| Manager view (each manager sees their own team) | A list of who reports to whom |
+| 2027 holiday lists | HR's lists, entered on the Rules page in December |
+
+---
+
+## Ongoing upkeep (a few minutes a month)
+
+- Upload the monthly punch file, or email it to hr@amipi.com. Its name must contain "monthdatewiseperformance".
+- Add each new joiner's email and joining date on the People page. New people are added automatically from the file.
+- Enter next year's holidays each December.
+- Back up the database and the `storage` folder (cPanel Backup).
 
 ## What could slow things down
 
 | Risk | What we do |
 |---|---|
-| A system has no automatic export | Use a shared drop folder until an automatic export is set up |
-| Remote logins are self-reported | The tool collects and checks them, but cannot prove them |
-| Mailbox access or AI approval is delayed | Phases 1, 2, 4 and 5 go ahead; emails are added later |
-| Rules are unclear | Use Jainam's current practice and adjust on the Rules page |
+| Microsoft 365 admin access takes time | Everything else goes live; uploads still work and emails are added later |
+| Shift times are wrong | Late flags will be off. Fix them on the Rules page; every month is re-checked straight away |
+| InMotion plan has no "Setup Node.js App" | Ask InMotion support to enable it, or move to a plan that has it |
+| Punch file comes only monthly | Reports and the month close still work fully. Reminders are limited, see Phase 4 |
+| Emails in mixed Hindi and English, or from personal addresses | Claude gives lower confidence and the day is kept as "Communicated, unclear". Adjust the 80% threshold if needed |
 
-## Summary timeline
+## Timeline
 
-| Weeks | Phase | You will have |
+| When | Phase | You will have |
 |---|---|---|
-| 1 | 0. Inputs | Everything needed to start |
-| 2–3 | 1. First real version | Real data in the screens, Excel downloads |
-| 4–6 | 2. Daily data | Automatic daily updates from every office |
-| 7–8 | 3. HR emails | Emails applied automatically |
-| 9 | 4. Reminders | Employees and HR notified automatically |
-| 10 | 5. Month close | Monthly package emailed automatically |
-| 11–14 | 6. Go live | Live tool, trial month alongside Jainam, then switch |
+| Week of 2 Nov | 1. Put it online | The tool live at its own address with September data |
+| Week of 2 Nov | 2. Connect Outlook and Claude | HR emails read and applied automatically |
+| Weeks of 2 and 9 Nov | 3. Fill in details | Confirmed shifts, emails, dates and report recipients |
+| November | 4. Trial month | October and November checked against Jainam's results |
+| December | 5. Switch over | The month closes and reports go out on their own |
+| From January 2027 | 6. Additions | Mumbai, New York, leave balances, as needed |
