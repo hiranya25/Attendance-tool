@@ -60,6 +60,8 @@ Two safety rules stay in, because they cost nothing and avoid unfair results:
 
 ## Build order
 
+The screens are built (see `frontend/`). They run on sample data until the backend exists.
+
 | Step | What | Needs |
 |---|---|---|
 | 1 | Read the monthly summary files and produce the exception report | Nothing more; can start now with the Jan and Feb 2026 files |
