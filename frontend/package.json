@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "vite --mode single",
     "build": "tsc -b && vite build",
-    "build:single": "tsc -b && vite build --mode single",
+    "build:demo": "tsc -b && vite build --mode single",
     "preview": "vite preview",
     "typecheck": "tsc -b"
   },

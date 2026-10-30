@@ -6,7 +6,7 @@ import { downloadCsv } from '../lib/export';
 import { changeRows } from '../lib/reports';
 import type { ChangeSource } from '../types';
 
-const SOURCES: ChangeSource[] = ['HR email', 'Late data', 'Employee list', 'Holiday calendar', 'Settings'];
+const SOURCES: ChangeSource[] = ['HR email', 'Late data', 'Attendance file', 'Attendance file (email)', 'Employee list', 'Holiday calendar', 'People page', 'Settings'];
 
 export function Changes() {
   const { data, emp, open, toast } = useApp();
@@ -46,7 +46,7 @@ export function Changes() {
                       {c.employeeId ? <button className="link" onClick={() => open({ kind: 'person', employeeId: c.employeeId as string })}>{emp(c.employeeId).name}</button> : <b>{c.subject}</b>}
                     </td>
                     <td className="nowrap">
-                      {c.date && c.employeeId ? <button className="link" onClick={() => open({ kind: 'day', employeeId: c.employeeId as string, date: c.date as string })}>{fmtDay(c.date)}</button> : c.date ? fmtDay(c.date) : '—'}
+                      {c.date?.length === 7 ? 'Whole month' : c.date && c.employeeId ? <button className="link" onClick={() => open({ kind: 'day', employeeId: c.employeeId as string, date: c.date as string })}>{fmtDay(c.date)}</button> : c.date ? fmtDay(c.date) : '—'}
                     </td>
                     <td className="change"><s>{c.from}</s> <span aria-hidden="true">→</span> <b>{c.to}</b></td>
                     <td className="muted wide">

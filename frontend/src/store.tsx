@@ -5,7 +5,9 @@ export type DrawerTarget =
   | { kind: 'issue'; id: string }
   | { kind: 'day'; employeeId: string; date: string }
   | { kind: 'person'; employeeId: string }
-  | { kind: 'email'; id: string };
+  | { kind: 'email'; id: string }
+  | { kind: 'account' }
+  | { kind: 'message'; id: string };
 
 export interface AppState {
   ref: Reference;
@@ -14,6 +16,7 @@ export interface AppState {
   data: MonthData;
   trend: TrendPoint[];
   reload: () => Promise<void>;
+  signOut: () => Promise<void>;
   open: (t: DrawerTarget) => void;
   go: (view: string) => void;
   toast: (text: string) => void;

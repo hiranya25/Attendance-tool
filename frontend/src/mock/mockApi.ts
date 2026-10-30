@@ -1,90 +1,116 @@
 import type { AttendanceApi } from '../api/client';
-import type { ChangeEntry, Holiday, MonthData, Settings, TrendPoint } from '../types';
+import type { ChangeEntry, Employee, Holiday, MonthData, Settings, Shift, TrendPoint, User } from '../types';
 import { isUnexplained, totals } from '../lib/stats';
 import { hm } from '../lib/format';
-import { DEFAULT_SETTINGS, EMPLOYEES, HOLIDAYS, MONTHS, OFFICES, TODAY } from './seed';
+import { CALENDARS, DEFAULT_SETTINGS, EMPLOYEES, HOLIDAYS, MONTHS, OFFICES, SHIFTS, TODAY } from './seed';
 import { simulateMonth } from './simulate';
 
-// Demo-only persistence: settings live in this browser so the demo remembers them.
-const KEY = 'attendance-desk-demo-v1';
-interface Stored { settings: Settings; holidays: Holiday[]; settingChanges: ChangeEntry[] }
+// Demo only: changes live in this browser so the demo remembers them. Nothing is sent anywhere.
+const KEY = 'attendance-desk-demo-v2';
+interface Stored { settings: Settings; holidays: Holiday[]; shifts: Shift[]; employees: Employee[]; settingChanges: ChangeEntry[] }
 
+const fresh = (): Stored => ({ settings: DEFAULT_SETTINGS, holidays: HOLIDAYS, shifts: SHIFTS, employees: EMPLOYEES, settingChanges: [] });
 function load(): Stored {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as Stored;
+    if (raw) return { ...fresh(), ...(JSON.parse(raw) as Partial<Stored>) };
   } catch { /* storage blocked: fall back to defaults */ }
-  return { settings: DEFAULT_SETTINGS, holidays: HOLIDAYS, settingChanges: [] };
+  return fresh();
 }
 function save(s: Stored) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* not saved, demo still works */ }
 }
 
+const DEMO_USER: User = { id: 1, email: 'you@example.com', name: 'Demo user', role: 'admin' };
 let state = load();
 let cache: Record<string, MonthData> = {};
-const month = (m: string) => (cache[m] ??= simulateMonth({ month: m, settings: state.settings, holidays: state.holidays, settingChanges: state.settingChanges }));
+const month = (m: string) => (cache[m] ??= simulateMonth({ month: m, settings: state.settings, holidays: state.holidays, settingChanges: state.settingChanges, shifts: state.shifts, employees: state.employees }));
 const nowStamp = () => `${TODAY}T${new Date().toTimeString().slice(0, 5)}`;
 const wait = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 120));
+const changed = () => { save(state); cache = {}; };
 
-function describe(a: Settings, b: Settings): string[] {
-  const out: string[] = [];
-  const num: [keyof Settings, string, string][] = [
-    ['graceMinutes', 'Late grace period', 'min'], ['earlyToleranceMinutes', 'Early departure tolerance', 'min'],
-    ['shortHoursToleranceMinutes', 'Short hours tolerance', 'min'], ['halfDayBelowHours', 'Half day below', 'h'],
-    ['duplicatePunchLimit', 'Duplicate punch limit', ''], ['systemIssueMinPeople', 'Likely system issue from', 'people'],
-    ['autoApplyConfidence', 'Apply emails at confidence', '%'], ['reminderAfterDays', 'Reminder after', 'working days'],
-    ['closeDay', 'Month closes on day', ''], ['hrDigestTime', 'HR daily summary time', ''],
-  ];
-  for (const [k, label, unit] of num) if (a[k] !== b[k]) out.push(`${label}: ${a[k]} → ${b[k]}${unit ? ' ' + unit : ''}`);
-  if (a.remindersOn !== b.remindersOn) out.push(`Employee reminders: ${a.remindersOn ? 'on' : 'off'} → ${b.remindersOn ? 'on' : 'off'}`);
-  if (a.reportRecipients.join() !== b.reportRecipients.join()) out.push(`Report recipients: ${b.reportRecipients.join(', ') || 'none'}`);
-  if (a.weeklyOff.join() !== b.weeklyOff.join()) out.push('Weekly off days changed');
-  for (const o of OFFICES) {
-    const x = a.shifts[o.id], y = b.shifts[o.id];
-    if (x.start !== y.start || x.end !== y.end) out.push(`${o.name} shift: ${hm(x.start)}–${hm(x.end)} → ${hm(y.start)}–${hm(y.end)}`);
-  }
-  return out;
-}
-
-function logSetting(from: string, to: string, reason: string) {
-  state.settingChanges.push({ id: `S${Date.now()}${state.settingChanges.length}`, at: nowStamp(), subject: 'Rules and settings', from, to, reason, source: 'Settings' });
+function log(from: string, to: string, reason: string, source: ChangeEntry['source'] = 'Settings', employeeId: string | null = null) {
+  state.settingChanges.push({ id: `S${Date.now()}${state.settingChanges.length}`, at: nowStamp(), employeeId, subject: employeeId ? null : 'Rules and settings', from, to, reason, source });
 }
 
 export const mockApi: AttendanceApi = {
-  getReference: () => wait({ offices: OFFICES, employees: EMPLOYEES, holidays: state.holidays, settings: state.settings, today: TODAY, months: MONTHS }),
+  session: () => wait({ user: DEMO_USER, needsSetup: false }),
+  setup: () => wait(DEMO_USER),
+  login: () => wait(DEMO_USER),
+  logout: () => wait(undefined),
+  changePassword: async () => { throw new Error('Passwords can only be changed on the real server.'); },
+
+  getReference: () => wait({ offices: OFFICES, employees: state.employees, holidays: state.holidays, calendars: CALENDARS, shifts: state.shifts, settings: state.settings, today: TODAY, months: MONTHS, user: DEMO_USER }),
   getMonth: (m) => wait(month(m)),
   getTrend: () => wait(MONTHS.map((m): TrendPoint => {
     const d = month(m);
-    const all = Object.values(d.records).flatMap((r) => Object.values(r));
     return {
       month: m,
       issues: d.issues.filter((x) => x.state !== 'system').length,
       unexplained: d.issues.filter(isUnexplained).length,
       lates: d.issues.filter((x) => x.type === 'Late arrival' && x.state !== 'explained').length,
-      presentRate: totals(all).rate,
+      presentRate: totals(Object.values(d.records).flatMap((r) => Object.values(r))).rate,
     };
   })),
+  connections: () => wait({ microsoft: false, ai: false, aiName: 'NVIDIA nvidia/nemotron-3-ultra-550b-a55b', sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
+  getNotification: async (id) => {
+    const n = Object.values(cache).flatMap((m) => m.notifications).find((x) => x.id === id);
+    return wait({ subject: n?.subject ?? 'Message', to: n?.to ?? '', at: n?.at ?? '', sent: true, error: null,
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px"><h2 style="font-size:18px">${(n?.subject ?? '').replace(/</g, '&lt;')}</h2><p>This is the demo. On the real server you see the exact email here.</p></div>` });
+  },
+  listImports: () => wait(MONTHS.map((m, i) => ({ id: i + 1, month: m, fileName: `monthdatewiseperformance-${m}.xls`, source: 'upload' as const, importedAt: `${m}-28T10:00`, importedBy: 'Sample data', people: EMPLOYEES.length, days: EMPLOYEES.length * 30 })).reverse()),
+
   async saveSettings(next) {
-    for (const line of describe(state.settings, next)) logSetting(line.split(':')[0], line.split(': ').slice(1).join(': '), 'Changed on the Rules page. All months were re-checked with the new value.');
+    for (const k of Object.keys(next) as (keyof Settings)[]) {
+      if (JSON.stringify(state.settings[k]) !== JSON.stringify(next[k])) log(`${k}: ${JSON.stringify(state.settings[k])}`, JSON.stringify(next[k]), 'Changed on the Rules page. Every month was checked again.');
+    }
     state = { ...state, settings: next };
-    save(state);
-    cache = {};
+    changed();
     return wait(undefined);
   },
   async saveHolidays(holidays) {
-    const added = holidays.filter((h) => !state.holidays.some((x) => x.date === h.date && x.calendar === h.calendar));
-    const removed = state.holidays.filter((h) => !holidays.some((x) => x.date === h.date && x.calendar === h.calendar));
-    for (const h of added) logSetting('Holiday calendar', `Added ${h.name} (${h.date}, ${h.calendar})`, 'Added on the Rules page.');
-    for (const h of removed) logSetting('Holiday calendar', `Removed ${h.name} (${h.date}, ${h.calendar})`, 'Removed on the Rules page.');
+    const key = (h: Holiday) => `${h.calendar}|${h.date}|${h.name}`;
+    const was = new Set(state.holidays.map(key));
+    const now = new Set(holidays.map(key));
+    for (const h of holidays) if (!was.has(key(h))) log('Holiday calendar', `Added ${h.name} (${h.date}, ${h.calendar})`, 'Added on the Rules page.');
+    for (const h of state.holidays) if (!now.has(key(h))) log(`${h.name} (${h.date}, ${h.calendar})`, 'Removed', 'Removed on the Rules page.');
     state = { ...state, holidays };
-    save(state);
-    cache = {};
+    changed();
     return wait(undefined);
   },
+  async saveShifts(shifts) {
+    for (const s of shifts) {
+      const old = state.shifts.find((x) => x.code === s.code);
+      if (old && (old.start !== s.start || old.end !== s.end)) log(`Shift ${s.code}: ${hm(old.start)}–${hm(old.end)}`, `${hm(s.start)}–${hm(s.end)}`, 'Changed on the Rules page.');
+    }
+    state = { ...state, shifts };
+    changed();
+    return wait(undefined);
+  },
+  async saveEmployee(id, changes) {
+    const old = state.employees.find((e) => e.id === id);
+    if (old) {
+      for (const k of Object.keys(changes) as (keyof Employee)[]) {
+        if ((old[k] ?? '') !== (changes[k] ?? '')) log(`${old.name}: ${k} ${old[k] || 'empty'}`, String(changes[k] || 'empty'), 'Changed on the People page.', 'People page', id);
+      }
+    }
+    state = { ...state, employees: state.employees.map((e) => (e.id === id ? { ...e, ...changes } : e)) };
+    changed();
+    return wait(undefined);
+  },
+  uploadImport: async () => { throw new Error('Uploads are not available in the demo. They work on the real server.'); },
+  buildPackage: async () => { throw new Error('In the demo the package is not built. On the real server it is saved and emailed.'); },
+  runJobs: () => wait(['This is the demo. On the real server this reads hr@, sends reminders and closes months.']),
+  listUsers: () => wait([DEMO_USER]),
+  addUser: async () => { throw new Error('Users can only be added on the real server.'); },
+  removeUser: async () => { throw new Error('Users can only be removed on the real server.'); },
+  resetPassword: async () => { throw new Error('Passwords can only be set on the real server.'); },
+  exportUrl: () => null,
+  reportUrl: () => null,
 };
 
 export function resetDemo() {
   try { localStorage.removeItem(KEY); } catch { /* ignore */ }
-  state = { settings: DEFAULT_SETTINGS, holidays: HOLIDAYS, settingChanges: [] };
+  state = fresh();
   cache = {};
 }

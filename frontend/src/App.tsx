@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, usingSampleData } from './api';
 import { Ctx, type AppState, type DrawerTarget } from './store';
-import type { Employee, MonthData, Office, Reference, TrendPoint } from './types';
+import type { Employee, MonthData, Office, Reference, TrendPoint, User } from './types';
 import { fmtDay, fmtMonth } from './lib/format';
 import { needsAttention } from './lib/stats';
 import { Overview } from './pages/Overview';
@@ -14,11 +14,14 @@ import { Reports } from './pages/Reports';
 import { People } from './pages/People';
 import { Rules } from './pages/Rules';
 import { DrawerHost } from './pages/Drawers';
+import { Files } from './pages/Files';
+import { Login } from './pages/Login';
 
 const VIEWS = [
   { id: 'overview', label: 'Overview', page: Overview },
   { id: 'attendance', label: 'Attendance', page: Attendance },
   { id: 'issues', label: 'Issues', page: Issues },
+  { id: 'files', label: 'Attendance files', page: Files },
   { id: 'emails', label: 'HR emails', page: Emails },
   { id: 'changes', label: 'Change log', page: Changes },
   { id: 'reminders', label: 'Reminders sent', page: Reminders },
@@ -41,6 +44,7 @@ export function App() {
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const [toastText, setToastText] = useState('');
   const [error, setError] = useState('');
+  const [session, setSession] = useState<{ user: User | null; needsSetup: boolean } | null>(null);
 
   useEffect(() => {
     const on = () => { setView(viewFromHash()); setDrawer(null); };
@@ -51,14 +55,17 @@ export function App() {
   const load = useCallback(async (m?: string) => {
     try {
       const r = await api.getReference();
-      const target = m || r.months[r.months.length - 1];
+      const target = m || r.latestDataMonth || r.months[r.months.length - 1];
       const [d, t] = await Promise.all([api.getMonth(target), api.getTrend()]);
       setRef(r); setMonth(target); setData(d); setTrend(t); setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    api.session().then(setSession).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, []);
+  useEffect(() => { if (session?.user) void load(); }, [session, load]);
 
   const toast = useCallback((t: string) => {
     setToastText(t);
@@ -75,6 +82,7 @@ export function App() {
       ref, month, data, trend, go, toast,
       setMonth: (m) => void load(m),
       reload: () => load(month),
+      signOut: async () => { await api.logout(); setSession({ user: null, needsSetup: false }); setRef(null); setData(null); },
       open: setDrawer,
       emp: (id) => empMap.get(id) as Employee,
       office: (id) => offMap.get(id) as Office,
@@ -90,6 +98,7 @@ export function App() {
       </div>
     );
   }
+  if (session && !session.user) return <Login firstRun={session.needsSetup} onDone={(user) => setSession({ user, needsSetup: false })} />;
   if (!state || !data) return <div className="boot muted">Loading attendance…</div>;
 
   const Page = VIEWS.find((v) => v.id === view)?.page ?? Overview;
@@ -116,7 +125,7 @@ export function App() {
           ))}
           <div className="rail-foot">
             <span className="live"><i />Runs by itself</span>
-            Checks every morning at 06:00 IST. No approvals needed.
+            Checks for new emails and files every 15 minutes. No approvals needed.
           </div>
         </nav>
         <div className="main">
@@ -133,6 +142,12 @@ export function App() {
             <span className="grow" />
             {usingSampleData && <span className="pill t-warn" title="Names and numbers are invented for the demo">Sample data</span>}
             <ThemeToggle />
+            {!usingSampleData && state.ref.user && (
+              <>
+                <button className="btn sm" onClick={() => setDrawer({ kind: 'account' })}>My password</button>
+                <button className="btn sm" onClick={() => void state.signOut()} title={`Signed in as ${state.ref.user.email}`}>Sign out {state.ref.user.name.split(' ')[0]}</button>
+              </>
+            )}
           </div>
           <main>
             <Page />

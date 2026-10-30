@@ -24,18 +24,20 @@ export function Overview() {
   ].sort((a, b) => b.at.localeCompare(a.at)).filter((f, i, all) => all.findIndex((g) => g.at === f.at && g.text === f.text) === i).slice(0, 8);
 
   const steps = [
-    { done: true, now: !data.close.closed, title: 'Collecting daily', text: `${data.sources.length} sources, ${Object.keys(data.records).length} people` },
+    { done: true, now: !data.close.closed, title: 'Collecting', text: `${data.sources.filter((s) => s.state !== 'off').length} sources, ${Object.keys(data.records).length} people` },
     { done: true, now: false, title: 'Checking and fixing', text: `${plural(data.changes.filter((c) => c.source !== 'Settings').length, 'automatic change')} so far` },
     { done: data.close.closed, now: false, title: 'Month closes', text: data.close.closed ? `Closed ${fmtWhen(data.close.closesAt)}` : `Automatically on ${fmtDay(data.close.closesAt)}, 06:00` },
-    { done: data.close.closed, now: false, title: 'Reports emailed', text: data.close.closed ? `Sent to ${data.close.reportsSentTo.length} people` : `To ${ref.settings.reportRecipients.join(', ')}` },
+    { done: data.close.closed, now: false, title: 'Reports emailed', text: data.close.closed ? (data.close.reportsSentTo.length ? `Sent to ${data.close.reportsSentTo.length} people` : 'Saved; no recipients set') : ref.settings.reportRecipients.length ? `To ${ref.settings.reportRecipients.join(', ')}` : 'No recipients set yet (Rules page)' },
   ];
 
   return (
     <>
       <PageHead
         title={fmtMonth(data.month)}
-        sub={data.close.closed ? 'This month is closed. Reports were sent automatically.' : `Everything below is updated by the tool each morning. Data up to ${fmtDay(data.dataThrough)}.`}
+        sub={data.close.closed ? 'This month is closed and its report is saved. A newer file would send a revised report.' : `Updated automatically whenever a new file or HR email arrives. Data up to ${fmtDay(data.dataThrough)}.`}
       />
+      {data.partial && !data.close.closed && <PartialNote />}
+      {data.hasData === false && <p className="note">No attendance file for {fmtMonth(data.month)} yet. Export the month so far from the punch system and upload it on Attendance files. You do not need to wait for the month to end.</p>}
       <div className="stats">
         <Stat label="Needs attention" value={attention.length} sub={`${plural(handled, 'other item')} handled by the tool`} tone={attention.length ? 'bad' : 'ok'} />
         <Stat label="Unexplained absences" value={unexplained.length} sub="No punches, no leave, no email" tone={unexplained.length ? 'warn' : undefined} />
@@ -95,7 +97,7 @@ export function Overview() {
                 <tr><th>Office</th><th className="num">People</th><th className="num">Present rate</th><th className="num">Attention</th><th className="num">Unexplained</th></tr>
               </thead>
               <tbody>
-                {ref.offices.map((o) => {
+                {ref.offices.filter((o) => Object.keys(data.records).some((id) => emp(id).officeId === o.id)).map((o) => {
                   const ids = Object.keys(data.records).filter((id) => emp(id).officeId === o.id);
                   const r = totals(ids.flatMap((id) => Object.values(data.records[id])));
                   const a = attention.filter((x) => emp(x.employeeId).officeId === o.id);
@@ -121,13 +123,24 @@ export function Overview() {
                   <b>{s.name}</b>
                   <span className="sub">{s.note}</span>
                 </span>
-                <Pill tone={s.ok ? 'ok' : 'warn'}>{s.ok ? 'Receiving' : 'Check device'}</Pill>
+                <Pill tone={s.state === 'off' ? 'mute' : s.ok ? 'ok' : 'warn'}>{s.state === 'off' ? 'Not connected' : s.ok ? 'Receiving' : s.state === 'warn' ? 'Waiting for file' : 'Check device'}</Pill>
               </li>
             ))}
           </ul>
-          <p className="panel-foot muted small">Every source is collected automatically at 06:00 IST each day.</p>
+          <p className="panel-foot muted small">Files are taken in as soon as they are uploaded or emailed to {ref.settings.hrEmail}.</p>
         </Panel>
       </div>
     </>
+  );
+}
+
+/** Shown while a month-to-date file is in use. */
+export function PartialNote() {
+  const { data } = useApp();
+  return (
+    <p className="note">
+      {fmtMonth(data.month)} is still in progress. This file covers up to {fmtDay(data.dataThrough)}; later days are not counted yet.
+      Upload a newer export from the punch system any time and it replaces this one. The month closes on {fmtDay(data.close.closesAt)} with the final file.
+    </p>
   );
 }
