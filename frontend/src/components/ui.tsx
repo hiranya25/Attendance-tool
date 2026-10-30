@@ -8,9 +8,10 @@ export const STATE_LABEL: Record<IssueState, string> = {
   explained: 'Explained by email',
   fixed: 'Fixed by late data',
   system: 'Likely system issue',
+  allowed: 'Within allowance',
 };
 const STATE_TONE: Record<IssueState, string> = {
-  open: 'bad', reminded: 'warn', unclear: 'warn', explained: 'ok', fixed: 'ok', system: 'info',
+  open: 'bad', reminded: 'warn', unclear: 'warn', explained: 'ok', fixed: 'ok', system: 'info', allowed: 'mute',
 };
 
 export function StatePill({ state }: { state: IssueState }) {
@@ -27,7 +28,7 @@ export function Sev({ s }: { s: Severity }) {
 }
 
 export const CODE_LABEL: Record<DayCode, string> = {
-  P: 'Present', HD: 'Half day', A: 'Absent', LV: 'Leave', HL: 'Holiday', WO: 'Weekly off', NR: 'No record', NE: 'Not employed', F: 'Upcoming',
+  P: 'Present', HD: 'Half day', A: 'Absent', LV: 'Leave', HL: 'Holiday', WO: 'Weekly off', NR: 'No record', NE: 'Not employed', F: 'Upcoming', NT: 'No attendance system',
 };
 
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: 'bad' | 'warn' | 'ok' }) {

@@ -16,10 +16,11 @@ Short lists to forward. Everything here is entered on the website or in `config.
 
 ## For Jainam
 
-1. **Confirm the shift times.** In Attendance Desk, go to **Rules & calendars → Shift timings**. For each code (G, D, S1, E1, E4, G2, P1), correct the start and end times, then tick **Confirmed**. If the punch system has different grace rules (for example "late only after 10:00"), note them.
-2. **Upload October so far.** Export the "Month Date Wise Performance" report for October from the punch system, and upload it on **Attendance files**. Upload again whenever you like, and once more with the full month after 31 Oct.
-3. **Compare October.** Download the workbook from **Monthly report**. Mark any person or day where the tool and your own sheet disagree, and send the list. Every difference gets fixed.
-4. **Two quick questions:** what do the punch remarks "M" and "EI" mean? Does anyone get leave balances tracked today (the 1.25 days a month)?
+1. **Confirm the shift times.** In Attendance Desk, go to **Rules & calendars → Shift timings**. Full Time (G, 9:30–18:30) and New York are confirmed. **Lokesh: the Day Time (D) timing.** Also check the remote codes (S1, E1, E4, G2, P1) and Mumbai's closing time, then tick **Confirmed**. The punch system seems to mark Indore staff late only after 10:00, while the stated rule is 9:30 with 15 minutes' grace. Please confirm which is right.
+2. **Upload the team list and the Mumbai sheet.** On **Attendance files**, upload the team list (.ods or .xlsx) and each month's Mumbai sheet. The tool recognises each file by itself.
+3. **Upload October so far.** Export the "Month Date Wise Performance" report for October from the punch system, and upload it on **Attendance files**. Upload again whenever you like, and once more with the full month after 31 Oct.
+4. **Compare October.** Download the workbook from **Monthly report**. Mark any person or day where the tool and your own sheet disagree, and send the list. Every difference gets fixed.
+5. **Two quick questions:** what do the punch remarks "M" and "EI" mean? Does anyone get leave balances tracked today (the 1.25 days a month)?
 
 ## For HR
 

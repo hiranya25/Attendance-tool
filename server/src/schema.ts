@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { CALENDARS, HOLIDAYS, OFFICES, RULES, SHIFTS } from './seed.ts';
 
-const VERSION = 2;
+const VERSION = 3;
 
 /** Creates the tables on first use and fills in the starting data. Safe to run on every start. */
 export async function ensureSchema(k: Knex): Promise<void> {
@@ -77,7 +77,22 @@ export async function ensureSchema(k: Knex): Promise<void> {
     await k('holidays').insert(Object.entries(HOLIDAYS).flatMap(([cal, list]) => list.map(([date, name]) => ({ calendar_id: cal, date, name }))));
   }
   if (!(await k('shifts').first())) {
-    await k('shifts').insert(SHIFTS.map(([code, name, start, end]) => ({ code, name, start_min: start, end_min: end, confirmed: 0 })));
+    await k('shifts').insert(SHIFTS.map(([code, name, start, end, ok]) => ({ code, name, start_min: start, end_min: end, confirmed: ok ? 1 : 0 })));
+  }
+  // Version 3: team list fields, per-source imports, and the confirmed office timings.
+  const addColumn = async (table: string, col: string, build: (t: Knex.AlterTableBuilder) => void) => {
+    if (!(await k.schema.hasColumn(table, col))) await k.schema.alterTable(table, build);
+  };
+  await addColumn('employees', 'manager', (t) => t.string('manager', 120).notNullable().defaultTo(''));
+  await addColumn('employees', 'role', (t) => t.string('role', 160).notNullable().defaultTo(''));
+  await addColumn('employees', 'location', (t) => t.string('location', 120).notNullable().defaultTo(''));
+  await addColumn('employees', 'work_hours', (t) => t.string('work_hours', 32).notNullable().defaultTo(''));
+  await addColumn('employees', 'tracked', (t) => t.integer('tracked').notNullable().defaultTo(1));
+  await addColumn('imports', 'scope', (t) => t.string('scope', 32).notNullable().defaultTo('punch'));
+  for (const [code, name, start, end, ok] of SHIFTS) {
+    const row = await k('shifts').where({ code }).first();
+    if (!row) await k('shifts').insert({ code, name, start_min: start, end_min: end, confirmed: ok ? 1 : 0 });
+    else if (ok && !Number(row.confirmed)) await k('shifts').where({ code }).update({ name, start_min: start, end_min: end, confirmed: 1 });
   }
   if (!(await k('settings').where({ name: 'rules' }).first())) await k('settings').insert({ name: 'rules', value: JSON.stringify(RULES) });
   if (!(await k('settings').where({ name: 'offices' }).first())) await k('settings').insert({ name: 'offices', value: JSON.stringify(OFFICES) });

@@ -21,17 +21,17 @@ export function totals(days: DayRecord[]) {
 export const needsAttention = (x: Issue) => ['open', 'reminded', 'unclear'].includes(x.state);
 export const isUnexplained = (x: Issue) => (x.type === 'Unexplained absence' || x.type === 'Long absence') && (x.state === 'open' || x.state === 'reminded');
 
-/** People with 3+ lates, 2+ unexplained absences or 2+ missing punches. */
+/** People with any late mark beyond their office's allowance, 2+ unexplained absences or 2+ missing punches. */
 export function patterns(issues: Issue[]) {
   const by: Record<string, { lates: number; unexplained: number; punches: number }> = {};
   for (const x of issues) {
-    if (['explained', 'system', 'fixed'].includes(x.state)) continue;
+    if (['explained', 'system', 'fixed', 'allowed'].includes(x.state)) continue;
     const p = (by[x.employeeId] ??= { lates: 0, unexplained: 0, punches: 0 });
     if (x.type === 'Late arrival') p.lates++;
     if (isUnexplained(x)) p.unexplained++;
     if (['Missing punch-in', 'Missing punch-out', 'Missing record'].includes(x.type)) p.punches++;
   }
-  return Object.fromEntries(Object.entries(by).filter(([, p]) => p.lates >= 3 || p.unexplained >= 2 || p.punches >= 2));
+  return Object.fromEntries(Object.entries(by).filter(([, p]) => p.lates >= 1 || p.unexplained >= 2 || p.punches >= 2));
 }
 
 export function summaryLines(data: MonthData, emps: Record<string, Employee>): string[] {
@@ -46,8 +46,10 @@ export function summaryLines(data: MonthData, emps: Record<string, Employee>): s
     `${monthName(data.month)}: present rate ${t.rate}% across ${people} people. Leave, holidays and weekly offs are left out of the rate.`,
     `${data.issues.length} items found. The tool handled ${data.issues.length - attention.length} by itself (emails, later data, likely system issues). ${attention.length} still need attention.`,
     `${applied} HR ${applied === 1 ? 'email' : 'emails'} applied automatically, ${unclear} kept as communicated but unclear.`,
-    `${data.issues.filter(isUnexplained).length} unexplained absences and ${data.issues.filter((x) => x.type === 'Late arrival' && x.state !== 'explained').length} late arrivals.`,
+    `${data.issues.filter(isUnexplained).length} unexplained absences. ${data.issues.filter((x) => x.type === 'Late arrival' && x.state !== 'system').length} late marks, of which ${data.issues.filter((x) => x.type === 'Late arrival' && x.state === 'open').length} are beyond the monthly allowance.`,
   ];
+  const offDays = Object.values(data.records).flatMap((r) => Object.values(r)).filter((d) => d.note?.startsWith('Worked on a')).length;
+  if (offDays) lines.push(`${offDays} days were worked on a weekly off or holiday (paid extra under the attendance rules).`);
   const names = Object.keys(pats).map((id) => emps[id]?.name ?? id);
   if (names.length) lines.push(`${names.length} people show a repeat pattern: ${names.join(', ')}.`);
   for (const x of data.issues) if (x.type === 'Long absence' && needsAttention(x)) lines.push(`${emps[x.employeeId]?.name ?? x.employeeId}: ${x.detail}`);

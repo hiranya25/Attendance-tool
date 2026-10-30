@@ -1,6 +1,13 @@
-import type { Connections, Employee, Holiday, ImportRecord, MonthData, Reference, Settings, Shift, TrendPoint, User } from '../types';
+import type { Connections, Employee, Holiday, ImportRecord, MonthData, Office, Reference, Settings, Shift, TrendPoint, User } from '../types';
 
-export interface ImportResult { months: string[]; people: number; days: number; newPeople: string[] }
+export interface ImportResult {
+  kind?: 'punch' | 'sheet' | 'team';
+  months: string[];
+  people: number;
+  days: number;
+  newPeople: string[];
+  team?: { added: string[]; updated: string[]; notTracked: string[]; notOnList: string[] };
+}
 
 /**
  * Everything the screens need from the server. The demo uses `mockApi`; the real server is `httpApi`.
@@ -22,6 +29,7 @@ export interface AttendanceApi {
   saveSettings(settings: Settings): Promise<void>;
   saveHolidays(holidays: Holiday[]): Promise<void>;
   saveShifts(shifts: Shift[]): Promise<void>;
+  saveOffices(offices: Office[]): Promise<void>;
   saveEmployee(id: string, changes: Partial<Employee>): Promise<void>;
   uploadImport(file: File): Promise<ImportResult>;
   buildPackage(month: string): Promise<{ version: number }>;

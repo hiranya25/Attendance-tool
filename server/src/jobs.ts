@@ -136,7 +136,8 @@ export async function sendReminders(): Promise<string> {
   const r = await R.getRules();
   const day = today();
   const emps = Object.fromEntries((await R.getEmployees()).map((e) => [e.id, e]));
-  const offices = Object.fromEntries((await R.getOffices()).map((o) => [o.id, o.name]));
+  const officeList = await R.getOffices();
+  const offices = Object.fromEntries(officeList.map((o) => [o.id, o.name]));
   const already = async (key: string) => Boolean(await k('notifications').where({ issue_key: key }).first());
   let count = 0;
   for (const month of [...new Set([D.prevMonth(day.slice(0, 7)), day.slice(0, 7)])]) {
@@ -164,7 +165,7 @@ export async function sendReminders(): Promise<string> {
       }
       if (!r.remindersOn || !NOTIFY_TYPES.includes(x.type) || !e.email) continue;
       if (x.date < D.addDays(day, -r.reminderWindowDays)) continue;
-      if (workingDayAfter(x.date, r.reminderAfterDays, r.weeklyOff) > day) continue;
+      if (workingDayAfter(x.date, r.reminderAfterDays, R.officeOf(officeList, e.officeId).weeklyOff ?? r.weeklyOff) > day) continue;
       const ask = x.type === 'Unexplained absence' ? 'please reply to this email with the reason for your absence' : 'please reply to this email with your actual time';
       const subject = `Please check your attendance for ${D.day(x.date)}`;
       const html = layout(subject, `<p>Hi ${esc(e.name.split(' ')[0])},</p><p>Our attendance records show <b>${esc(x.type.toLowerCase())}</b> on ${D.day(x.date)}. ${esc(x.detail)}</p><p>If this is not right, ${ask}. Your reply goes to HR and is applied automatically.</p>`);

@@ -146,7 +146,12 @@ To start with HR and report recipients only, turn **Remind employees** off on th
 
 ## Everyday use
 
-There is nothing to do. Either upload the punch system's monthly file on **Attendance files**, or email it to hr@amipi.com as an attachment. Its name must contain `monthdatewiseperformance`.
+There is nothing to do except bring in the files. On **Attendance files**, upload:
+- the punch system's monthly file. It can also be emailed to hr@amipi.com as an attachment, with `monthdatewiseperformance` in its name.
+- Mumbai's monthly attendance sheet (first column "Date", one column per person, OK / L1 / A).
+- the team list, whenever it changes (NAME, MANAGER, Work Hours, LOCATION, email, role). People marked NA are not tracked.
+
+The tool recognises which file is which. New York has no attendance system: its leave and late arrivals come from emails to hr@amipi.com.
 
 ## Updating to a new version
 

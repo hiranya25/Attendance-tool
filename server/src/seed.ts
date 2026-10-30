@@ -1,11 +1,17 @@
 // Starting data: offices, holiday calendars, shift timings and rules. Everything here can be changed in the app.
 import type { Calendar, Office, Settings } from '../../shared/types.ts';
 
+const NY_BEYOND = 'Policy: one day\'s salary is deducted for each late mark beyond the allowed 4.';
+
 export const OFFICES: Office[] = [
-  { id: 'indore', name: 'Indore (BT Office)', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Punch system export', departments: ['AMIPI - BT OFFICE'] },
-  { id: 'remote', name: 'Remote', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Punch system export', departments: ['AMIPI REMOTE'] },
-  { id: 'mumbai', name: 'Mumbai', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Not connected yet', departments: [] },
-  { id: 'newyork', name: 'New York', tzLabel: 'ET', timeZone: 'America/New_York', source: 'Not connected yet', departments: [] },
+  { id: 'indore', name: 'Indore (BT Office)', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Punch system export', departments: ['AMIPI - BT OFFICE'],
+    mode: 'punch', weeklyOff: [0, 6], graceMinutes: 15, lateAllowance: 4, lateBeyondNote: NY_BEYOND },
+  { id: 'remote', name: 'Remote', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Punch system export', departments: ['AMIPI REMOTE'],
+    mode: 'punch', weeklyOff: [0, 6], graceMinutes: 15, lateAllowance: 4, lateBeyondNote: NY_BEYOND },
+  { id: 'mumbai', name: 'Mumbai', tzLabel: 'IST', timeZone: 'Asia/Kolkata', source: 'Monthly attendance sheet', departments: [],
+    mode: 'sheet', weeklyOff: [0], graceMinutes: 20, lateAllowance: 4, lateBeyondNote: 'Mumbai allows 4 late marks a month. A late with overtime that day is not marked.' },
+  { id: 'newyork', name: 'New York', tzLabel: 'ET', timeZone: 'America/New_York', source: 'HR emails only (no attendance system)', departments: [],
+    mode: 'emails', weeklyOff: [0, 6], graceMinutes: 15, lateAllowance: 4, lateBeyondNote: NY_BEYOND },
 ];
 
 export const CALENDARS: (Calendar & { sort: number })[] = [
@@ -37,12 +43,12 @@ export const HOLIDAYS: Record<string, [string, string][]> = {
   ],
 };
 
-// Shift codes from the punch export. Start times are estimated from September 2026 data, where the punch
-// system's own late flags start; they need confirming with Jainam.
-export const SHIFTS: [code: string, name: string, start: number, end: number][] = [
-  ['G', 'General shift', 585, 1110], ['D', 'Day shift', 225, 765], ['S1', 'Shift S1', 450, 990],
-  ['E1', 'Shift E1', 540, 1080], ['E4', 'Shift E4 (short day)', 600, 990], ['G2', 'Shift G2', 540, 1110],
-  ['P1', 'Shift P1', 645, 1185],
+// Shift codes. G (Full Time, 9:30-18:30 IST) and NY (9:15-18:15 ET, from the signed NY attendance rules) are
+// confirmed. The others are estimated from September 2026 punch data and need confirming (D: from Lokesh).
+export const SHIFTS: [code: string, name: string, start: number, end: number, confirmed: boolean][] = [
+  ['G', 'Full Time', 570, 1110, true], ['D', 'Day Time', 225, 765, false], ['S1', 'Shift S1', 450, 990, false],
+  ['E1', 'Shift E1', 540, 1080, false], ['E4', 'Shift E4 (short day)', 600, 990, false], ['G2', 'Shift G2', 540, 1110, false],
+  ['P1', 'Shift P1', 645, 1185, false], ['NY', 'New York office', 555, 1095, true], ['MUM', 'Mumbai office', 600, 1140, false],
 ];
 
 export const RULES: Settings = {

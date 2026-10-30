@@ -15,6 +15,7 @@ const NEXT: Record<IssueState, string> = {
   explained: 'Nothing more to do. Shown as explained in the report.',
   fixed: 'Nothing more to do. The corrected data is in the master file.',
   system: 'Not counted against the employee. HR was alerted about the likely device or sync problem.',
+  allowed: 'Within the late marks this office allows each month. Counted, but nothing happens unless the allowance is passed.',
 };
 
 export function DrawerHost({ target, onClose }: { target: DrawerTarget; onClose: () => void }) {
@@ -130,6 +131,8 @@ function PersonDrawer({ employeeId, onClose }: { employeeId: string; onClose: ()
         ['Email', <span className="mono small">{e.email || 'Not set'}</span>],
         ['Shift', shift ? `${shift.code} ${hm(shift.start)}–${hm(shift.end)} ${o?.tzLabel ?? ''}` : e.shiftCode || '—'],
         ['Holidays', cal?.name ?? '—'],
+        ['Manager', e.manager || '—'],
+        ['Role', e.role || '—'],
         ['Joined', e.joinDate ? `${fmtShort(e.joinDate)} ${e.joinDate.slice(0, 4)}` : 'Not set'],
         ['Left', e.exitDate ? `${fmtShort(e.exitDate)} ${e.exitDate.slice(0, 4)}` : '—'],
       ]} />
@@ -197,7 +200,8 @@ function PersonEditor({ employeeId }: { employeeId: string }) {
   const { emp, ref, reload, toast } = useApp();
   const e = emp(employeeId);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ email: e.email, officeId: e.officeId, shiftCode: e.shiftCode, calendarId: e.calendarId, joinDate: e.joinDate ?? '', exitDate: e.exitDate ?? '', aliases: e.aliases });
+  const [form, setForm] = useState({ email: e.email, officeId: e.officeId, shiftCode: e.shiftCode, calendarId: e.calendarId, joinDate: e.joinDate ?? '', exitDate: e.exitDate ?? '', aliases: e.aliases, manager: e.manager ?? '', role: e.role ?? '' });
+  const [tracked, setTracked] = useState(e.tracked !== false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (k: keyof typeof form) => (ev: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: ev.target.value }));
@@ -207,7 +211,7 @@ function PersonEditor({ employeeId }: { employeeId: string }) {
     setBusy(true);
     setError('');
     try {
-      await api.saveEmployee(employeeId, { ...form, joinDate: form.joinDate || null, exitDate: form.exitDate || null });
+      await api.saveEmployee(employeeId, { ...form, joinDate: form.joinDate || null, exitDate: form.exitDate || null, tracked });
       await reload();
       toast('Saved. Attendance was checked again.');
       setOpen(false);
@@ -220,6 +224,11 @@ function PersonEditor({ employeeId }: { employeeId: string }) {
   return (
     <form className="form edit" onSubmit={save}>
       <label className="field" htmlFor="pe-email"><span>Email (for reminders)</span><input id="pe-email" type="email" value={form.email} onChange={set('email')} /></label>
+      <div className="two-col">
+        <label className="field" htmlFor="pe-manager"><span>Manager</span><input id="pe-manager" type="text" value={form.manager} onChange={set('manager')} /></label>
+        <label className="field" htmlFor="pe-role"><span>Role</span><input id="pe-role" type="text" value={form.role} onChange={set('role')} /></label>
+      </div>
+      <label className="switch" htmlFor="pe-tracked"><input id="pe-tracked" type="checkbox" checked={tracked} onChange={(ev) => setTracked(ev.target.checked)} /> Track this person's attendance (off for "NA" on the team list)</label>
       <label className="field" htmlFor="pe-aliases"><span>Other names used in emails</span><input id="pe-aliases" type="text" value={form.aliases} onChange={set('aliases')} placeholder="For example Jolly" /></label>
       <div className="two-col">
         <label className="field" htmlFor="pe-office"><span>Office</span>
