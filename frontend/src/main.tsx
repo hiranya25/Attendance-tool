@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './styles.css';
 import { App } from './App';
 import { startStackTables } from './lib/stackTables';
+import { applyTheme, savedTheme } from './lib/theme';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
@@ -10,4 +11,5 @@ createRoot(document.getElementById('root') as HTMLElement).render(
   </StrictMode>,
 );
 
+applyTheme(savedTheme());
 startStackTables();

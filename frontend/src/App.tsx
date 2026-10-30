@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, usingSampleData } from './api';
 import { Ctx, type AppState, type DrawerTarget } from './store';
 import type { Employee, MonthData, Office, Reference, TrendPoint, User } from './types';
@@ -17,6 +17,7 @@ import { DrawerHost } from './pages/Drawers';
 import { Files } from './pages/Files';
 import { History } from './pages/History';
 import { Login } from './pages/Login';
+import { Settings, initials } from './pages/Settings';
 
 const VIEWS = [
   { id: 'overview', label: 'Overview', page: Overview },
@@ -30,6 +31,7 @@ const VIEWS = [
   { id: 'history', label: 'Past months', page: History },
   { id: 'people', label: 'People', page: People },
   { id: 'rules', label: 'Rules & calendars', page: Rules },
+  { id: 'settings', label: 'Settings', page: Settings },
 ] as const;
 
 const viewFromHash = () => {
@@ -143,13 +145,7 @@ export function App() {
             </span>
             <span className="grow" />
             {usingSampleData && <span className="pill t-warn" title="Names and numbers are invented for the demo">Sample data</span>}
-            <ThemeToggle />
-            {!usingSampleData && state.ref.user && (
-              <>
-                <button className="btn sm" onClick={() => setDrawer({ kind: 'account' })}>My password</button>
-                <button className="btn sm" onClick={() => void state.signOut()} title={`Signed in as ${state.ref.user.email}`}>Sign out {state.ref.user.name.split(' ')[0]}</button>
-              </>
-            )}
+            {state.ref.user && <UserMenu user={state.ref.user} onSettings={() => go('settings')} onSignOut={() => void state.signOut()} />}
           </div>
           <main>
             <Page />
@@ -162,16 +158,36 @@ export function App() {
   );
 }
 
-function ThemeToggle() {
-  const [theme, setTheme] = useState<string>(() => {
-    try { return localStorage.getItem('attendance-desk-theme') || ''; } catch { return ''; }
-  });
+/** The signed-in person's initials. Click for their name, Settings and Sign out. */
+function UserMenu({ user, onSettings, onSignOut }: { user: User; onSettings: () => void; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (theme) document.documentElement.setAttribute('data-theme', theme);
-    else document.documentElement.removeAttribute('data-theme');
-    try { localStorage.setItem('attendance-desk-theme', theme); } catch { /* ignore */ }
-  }, [theme]);
-  const next = theme === '' ? 'dark' : theme === 'dark' ? 'light' : '';
-  const label = theme === '' ? 'Theme: system' : theme === 'dark' ? 'Theme: dark' : 'Theme: light';
-  return <button className="btn sm" onClick={() => setTheme(next)} title="Switch theme">{label}</button>;
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const pick = (f: () => void) => () => { setOpen(false); f(); };
+  return (
+    <div className="user-menu" ref={box}>
+      <button className="avatar" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        title={`Signed in as ${user.name}`} aria-label={`Account menu for ${user.name}`}>
+        {initials(user.name)}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          <div className="menu-who">
+            <b>{user.name}</b>
+            <span className="sub mono">{user.email}</span>
+            <span className="sub">{user.role === 'admin' ? 'Admin' : 'Viewer'}</span>
+          </div>
+          <button type="button" role="menuitem" onClick={pick(onSettings)}>Settings</button>
+          <button type="button" role="menuitem" className="danger" onClick={pick(onSignOut)}>Sign out</button>
+        </div>
+      )}
+    </div>
+  );
 }

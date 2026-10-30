@@ -202,7 +202,7 @@ node cli.cjs reset-password someone@amipi.com "a-new-password1"
 node cli.cjs run
 ```
 
-Normally, an admin resets passwords on **Rules & calendars → Who can sign in → Set password**. Anyone can change their own password with the **My password** button at the top.
+Normally, an admin resets passwords on **Rules & calendars → Who can sign in → Set password**. Anyone can change their own password in **Settings**: click the round badge with your initials at the top right, then **Settings**. Sign out is in the same menu.
 
 ## Security built in
 

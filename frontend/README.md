@@ -46,6 +46,7 @@ npm run dev:demo
 | People | Employee list with join and leave dates |
 | Attendance files | Upload the punch system's monthly file, and see every file received |
 | Rules & calendars | Connections, shift times, thresholds, email confidence, reminders, month close, holiday calendars, user accounts. Saving re-checks every month |
+| Settings | Your account, light or dark look, change your password, sign out. Open it from the round badge with your initials (top right) |
 
 ## How the code is organised
 
