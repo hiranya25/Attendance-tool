@@ -38,6 +38,7 @@ export const mockApi: AttendanceApi = {
   setup: () => wait(DEMO_USER),
   login: () => wait(DEMO_USER),
   logout: () => wait(undefined),
+  changePassword: async () => { throw new Error('Passwords can only be changed on the real server.'); },
 
   getReference: () => wait({ offices: OFFICES, employees: state.employees, holidays: state.holidays, calendars: CALENDARS, shifts: state.shifts, settings: state.settings, today: TODAY, months: MONTHS, user: DEMO_USER }),
   getMonth: (m) => wait(month(m)),
@@ -52,6 +53,11 @@ export const mockApi: AttendanceApi = {
     };
   })),
   connections: () => wait({ microsoft: false, ai: false, aiName: 'NVIDIA nvidia/nemotron-3-ultra-550b-a55b', sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
+  getNotification: async (id) => {
+    const n = Object.values(cache).flatMap((m) => m.notifications).find((x) => x.id === id);
+    return wait({ subject: n?.subject ?? 'Message', to: n?.to ?? '', at: n?.at ?? '', sent: true, error: null,
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px"><h2 style="font-size:18px">${(n?.subject ?? '').replace(/</g, '&lt;')}</h2><p>This is the demo. On the real server you see the exact email here.</p></div>` });
+  },
   listImports: () => wait(MONTHS.map((m, i) => ({ id: i + 1, month: m, fileName: `monthdatewiseperformance-${m}.xls`, source: 'upload' as const, importedAt: `${m}-28T10:00`, importedBy: 'Sample data', people: EMPLOYEES.length, days: EMPLOYEES.length * 30 })).reverse()),
 
   async saveSettings(next) {
@@ -98,6 +104,7 @@ export const mockApi: AttendanceApi = {
   listUsers: () => wait([DEMO_USER]),
   addUser: async () => { throw new Error('Users can only be added on the real server.'); },
   removeUser: async () => { throw new Error('Users can only be removed on the real server.'); },
+  resetPassword: async () => { throw new Error('Passwords can only be set on the real server.'); },
   exportUrl: () => null,
   reportUrl: () => null,
 };

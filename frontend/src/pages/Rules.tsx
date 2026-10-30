@@ -5,6 +5,7 @@ import { useApp } from '../store';
 import { Empty, PageHead, Panel, Pill } from '../components/ui';
 import { fmtDay, fmtWhen, hm, parseHm } from '../lib/format';
 import type { Connections, Holiday, Settings, Shift, User } from '../types';
+import { PASSWORD_RULE, passwordProblem } from '../lib/password';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -282,35 +283,66 @@ function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'viewer' });
   const [error, setError] = useState('');
+  const [resetFor, setResetFor] = useState<number | null>(null);
+  const [newPw, setNewPw] = useState('');
+  const [removeFor, setRemoveFor] = useState<number | null>(null);
   const refresh = () => api.listUsers().then(setUsers).catch(() => setUsers([]));
   useEffect(() => { void refresh(); }, []);
+  const run = async (fn: () => Promise<void>) => {
+    setError('');
+    try { await fn(); } catch (err) { setError((err as Error).message); }
+  };
   async function add(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    try {
+    const problem = passwordProblem(form.password);
+    if (problem) { setError(problem); return; }
+    await run(async () => {
       await api.addUser(form);
       setForm({ name: '', email: '', password: '', role: 'viewer' });
       toast('Account added');
       await refresh();
-    } catch (err) {
-      setError((err as Error).message);
-    }
+    });
+  }
+  async function reset(e: FormEvent, u: User) {
+    e.preventDefault();
+    const problem = passwordProblem(newPw);
+    if (problem) { setError(problem); return; }
+    await run(async () => {
+      await api.resetPassword(u.id, newPw);
+      setResetFor(null);
+      setNewPw('');
+      toast(`New password set for ${u.name}. Tell them, and ask them to change it under "My password".`);
+    });
   }
   return (
-    <Panel title="Who can sign in" note="Admins can change rules, people and uploads. Viewers can see everything but not change it." flush>
+    <Panel title="Who can sign in" note={`Admins can change rules, people and uploads. Viewers can see everything but not change it. ${PASSWORD_RULE}`} flush>
       <ul className="list">
         {users.map((u) => (
-          <li key={u.id} className="list-row static">
+          <li key={u.id} className="list-row static wrap">
             <span className="grow"><b>{u.name}</b><span className="sub mono">{u.email}</span></span>
             <Pill tone={u.role === 'admin' ? 'accent' : 'mute'}>{u.role === 'admin' ? 'Admin' : 'Viewer'}</Pill>
-            {u.id !== ref.user?.id && <button className="btn sm ghost" onClick={async () => { await api.removeUser(u.id); toast(`Removed ${u.name}`); await refresh(); }}>Remove</button>}
+            {u.id !== ref.user?.id && (
+              <>
+                <button className="btn sm" onClick={() => { setResetFor(resetFor === u.id ? null : u.id); setNewPw(''); setRemoveFor(null); }}>Set password</button>
+                {removeFor === u.id
+                  ? <button className="btn sm bad" onClick={() => run(async () => { await api.removeUser(u.id); setRemoveFor(null); toast(`Removed ${u.name}`); await refresh(); })}>Confirm remove</button>
+                  : <button className="btn sm ghost" onClick={() => { setRemoveFor(u.id); setResetFor(null); }}>Remove</button>}
+              </>
+            )}
+            {resetFor === u.id && (
+              <form className="inline-form" onSubmit={(e) => reset(e, u)}>
+                <label htmlFor={`reset-${u.id}`} className="sr">New password for {u.name}</label>
+                <input id={`reset-${u.id}`} type="password" autoComplete="new-password" placeholder="New password" value={newPw} onChange={(e) => setNewPw(e.target.value)} required minLength={8} />
+                <button className="btn sm pri" type="submit">Save password</button>
+              </form>
+            )}
           </li>
         ))}
       </ul>
       <form className="add-row" onSubmit={add}>
         <input id="u-name" type="text" aria-label="Name" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         <input id="u-email" type="email" aria-label="Email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        <input id="u-pass" type="password" aria-label="Starting password" placeholder="Starting password (10+ characters)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={10} autoComplete="new-password" />
+        <input id="u-pass" type="password" aria-label="Starting password" placeholder="Starting password (8+ with a number)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} autoComplete="new-password" />
         <select id="u-role" aria-label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
           <option value="viewer">Viewer</option><option value="admin">Admin</option>
         </select>

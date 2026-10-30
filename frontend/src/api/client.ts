@@ -10,12 +10,14 @@ export interface AttendanceApi {
   setup(name: string, email: string, password: string): Promise<User>;
   login(email: string, password: string): Promise<User>;
   logout(): Promise<void>;
+  changePassword(current: string, password: string): Promise<void>;
 
   getReference(): Promise<Reference>;
   getMonth(month: string): Promise<MonthData>;
   getTrend(): Promise<TrendPoint[]>;
   connections(): Promise<Connections>;
   listImports(): Promise<ImportRecord[]>;
+  getNotification(id: string): Promise<{ subject: string; to: string; at: string; sent: boolean; error: string | null; html: string }>;
 
   saveSettings(settings: Settings): Promise<void>;
   saveHolidays(holidays: Holiday[]): Promise<void>;
@@ -28,6 +30,7 @@ export interface AttendanceApi {
   listUsers(): Promise<User[]>;
   addUser(u: { name: string; email: string; password: string; role: string }): Promise<void>;
   removeUser(id: number): Promise<void>;
+  resetPassword(id: number, password: string): Promise<void>;
 
   /** Link to an Excel download, or null when downloads come from the browser instead (demo). */
   exportUrl(month: string, part: 'all' | 'master' | 'issues'): string | null;

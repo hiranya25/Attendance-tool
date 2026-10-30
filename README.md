@@ -11,6 +11,7 @@ It takes in the punch system's monthly file (uploaded, or emailed to hr@amipi.co
 | `shared/` | The data model both use. |
 | `deploy/` | `build.sh` makes the upload package for cPanel. |
 | `docs/DEPLOY.md` | Step-by-step setup on InMotion cPanel. |
+| `docs/CHECKLISTS.md` | Short lists to forward to the IT admin, Jainam, HR and the founder. |
 | `IMPLEMENTATION_PLAN.md`, `NEXT_STEPS.md` | Plan and open items. |
 
 ## Run it on your own computer
@@ -145,7 +146,7 @@ Open **http://localhost:5173**.
 
 ### 6. Try it out
 
-1. **Create the first admin account.** It is only stored on your computer.
+1. **Create the first admin account.** It is only stored on your computer. Passwords need at least 8 characters, including a number.
 2. Go to **Attendance files** and upload the punch system's "Month Date Wise Performance" `.xls` file, for example the September 2026 one.
 3. Look through **Overview**, **Attendance** (click any day), **Issues** and **People**.
 4. On **People**, click a person, then **Edit details**. Add an email or a leaving date, and watch their issues change.
@@ -179,4 +180,5 @@ Put your NVIDIA API key (starts with `nvapi-`) in `ai.apiKey`, and the Microsoft
 | `npm install` fails on `better-sqlite3` | Use Node.js 20 or 22 LTS, delete `server/node_modules`, and run `npm install` again |
 | `Port 3000 is already in use` | Another copy is still running. Close it, or stop it with `Ctrl + C` in its terminal |
 | The page says the screens are not installed | Run `npm run build` in the `frontend` folder first (option A) |
-| You forgot your local password | Delete the `server/storage` folder and start again |
+| You forgot your local password | Run `node dist/cli.cjs reset-password you@example.com newpass123` in the `server` folder (after `npm run build`), or delete `server/storage` to start again |
+| Sign-in says it is paused | Too many wrong passwords. Wait 15 minutes, or reset the password as above |

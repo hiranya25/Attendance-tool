@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { api } from '../api';
 import type { User } from '../types';
+import { PASSWORD_RULE, passwordProblem } from '../lib/password';
 
 /** Sign-in, or the one-time "create the first admin" form on a fresh install. */
 export function Login({ firstRun, onDone }: { firstRun: boolean; onDone: (u: User) => void }) {
@@ -12,8 +13,12 @@ export function Login({ firstRun, onDone }: { firstRun: boolean; onDone: (u: Use
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError('');
+    if (firstRun) {
+      const problem = passwordProblem(password);
+      if (problem) { setError(problem); return; }
+    }
+    setBusy(true);
     try {
       onDone(firstRun ? await api.setup(name, email, password) : await api.login(email, password));
     } catch (err) {
@@ -40,8 +45,9 @@ export function Login({ firstRun, onDone }: { firstRun: boolean; onDone: (u: Use
         <label className="field" htmlFor="login-email"><span>Email</span>
           <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
         </label>
-        <label className="field" htmlFor="login-password"><span>Password{firstRun ? ' (at least 10 characters)' : ''}</span>
-          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={firstRun ? 10 : undefined} autoComplete={firstRun ? 'new-password' : 'current-password'} />
+        <label className="field" htmlFor="login-password"><span>Password</span>
+          <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={firstRun ? 8 : undefined} autoComplete={firstRun ? 'new-password' : 'current-password'} aria-describedby={firstRun ? 'pw-rule' : undefined} />
+          {firstRun && <span id="pw-rule" className="muted small">{PASSWORD_RULE}</span>}
         </label>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="btn pri" type="submit" disabled={busy}>{busy ? 'Please wait…' : firstRun ? 'Create account' : 'Sign in'}</button>

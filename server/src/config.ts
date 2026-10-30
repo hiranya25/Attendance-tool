@@ -8,7 +8,7 @@ export interface AppConfig {
   storageDir: string;
   sessionSecret: string;
   microsoft: { tenantId: string; clientId: string; clientSecret: string; mailbox: string; sender: string };
-  ai: { provider: 'nvidia' | 'anthropic'; apiKey: string; model: string; baseUrl: string };
+  ai: { provider: 'nvidia' | 'anthropic'; apiKey: string; model: string; baseUrl: string; maxPerRun?: number; pauseSeconds?: number };
   /** Older config files: Claude settings. Used only when "ai" is not set. */
   anthropic?: { apiKey: string; model: string };
   sendEmail: boolean;

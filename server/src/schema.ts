@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { CALENDARS, HOLIDAYS, OFFICES, RULES, SHIFTS } from './seed.ts';
 
-const VERSION = 1;
+const VERSION = 2;
 
 /** Creates the tables on first use and fills in the starting data. Safe to run on every start. */
 export async function ensureSchema(k: Knex): Promise<void> {
@@ -63,6 +63,9 @@ export async function ensureSchema(k: Knex): Promise<void> {
     t.increments('id'); t.string('at', 20).notNullable(); t.string('user_name', 120).notNullable(); t.string('subject', 255).notNullable();
     t.string('emp_code', 32).nullable(); t.string('date', 10).nullable(); t.string('from_val', 500).notNullable(); t.string('to_val', 500).notNullable();
     t.string('reason', 500).notNullable(); t.string('source', 32).notNullable();
+  });
+  await create('login_attempts', (t) => {
+    t.increments('id'); t.string('email', 190).notNullable().index(); t.string('ip', 64).notNullable().defaultTo('').index(); t.string('at', 20).notNullable();
   });
   await create('reports', (t) => {
     t.increments('id'); t.string('month', 7).notNullable().index(); t.integer('version').notNullable(); t.string('path', 500).notNullable();

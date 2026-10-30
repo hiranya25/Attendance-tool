@@ -74,10 +74,12 @@ Keep `config.json` private. It holds passwords and must never go inside `public_
 | Application startup file | `app.cjs` |
 
 3. Click **Create**, then **Restart**.
-4. Open `https://attendance.amipi.com`. You should see **Create the first admin account**. Create yours.
+4. Open `https://attendance.amipi.com`. You should see **Create the first admin account**. Create yours. Passwords need at least 8 characters, including a number.
 5. Go to **Attendance files** and upload the latest "Month Date Wise Performance" export.
 
-If the page does not load, the error is in `attendance-desk/stderr.log` (cPanel writes it there).
+If the page does not load, the error is in `attendance-desk/stderr.log` (cPanel writes it there). Errors while running are also written to `attendance-desk/storage/logs/error.log`.
+
+To check the tool is up at any time, open `https://attendance.amipi.com/api/health`. It shows `"ok": true` when the app and database are working, and the time of the last automatic run. You can give this address to an uptime monitor (for example UptimeRobot) to be alerted if it ever goes down.
 
 If that log says **"permission denied for schema public"**, the database user is not allowed to create tables yet. This happens on newer PostgreSQL versions. Ask InMotion support to run this, using your real names:
 
@@ -125,7 +127,7 @@ The tool reads mail from three days before it was connected onwards. It never de
 The AI only reads each email and reports who it is about, which days, what kind of absence it is, and how sure it is. The tool's own rules decide what changes.
 
 **About the free key:**
-- **Limits.** The free tier has a request limit. If it is reached, the email is simply read again on the next 15-minute run.
+- **Limits.** The free tier has a request limit. The tool waits 3 seconds between emails and reads at most 20 per 15-minute run. If NVIDIA still says it is busy, the rest are read on the next run. You can change this with `"maxPerRun"` and `"pauseSeconds"` under `ai` in `config.json`.
 - **Privacy.** HR emails, including sick-leave details, are sent to NVIDIA's service to be read. Check that NVIDIA's terms for the free key suit company HR data, and that the founder is happy with it.
 
 **Using Claude instead:** set `"ai": { "provider": "anthropic", "apiKey": "sk-ant-...", "model": "claude-opus-5-5" }` and restart.
@@ -138,7 +140,9 @@ On the screens:
 - **Rules & calendars, Holiday calendars:** check the dates marked "Check date".
 - **Rules & calendars, Month close and reports:** add the people who should receive the monthly report.
 
-Then set `"sendEmail": true` in `config.json` and restart the app.
+Use **Preview** on the Reminders page to see exactly what each email will say. Then set `"sendEmail": true` in `config.json` and restart the app.
+
+To start with HR and report recipients only, turn **Remind employees** off on the Rules page first, and turn it on later. `docs/CHECKLISTS.md` has short lists to forward to each person involved.
 
 ## Everyday use
 
@@ -168,5 +172,18 @@ node cli.cjs add-user someone@amipi.com "Their Name" viewer "a-starting-password
 ```
 
 ```bash
+node cli.cjs reset-password someone@amipi.com "a-new-password1"
+```
+
+```bash
 node cli.cjs run
 ```
+
+Normally, an admin resets passwords on **Rules & calendars → Who can sign in → Set password**. Anyone can change their own password with the **My password** button at the top.
+
+## Security built in
+
+- **Passwords** need at least 8 characters, including a number. They are stored scrambled (scrypt), never as plain text.
+- **Sign-in pauses for 15 minutes** after 5 wrong passwords for one account, or 20 from one address.
+- **Viewers can see but not change** anything; only admins can upload files, edit people, change rules and manage accounts.
+- **`config.json`, uploaded files and reports** stay outside the public website.

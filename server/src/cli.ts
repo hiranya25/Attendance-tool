@@ -1,11 +1,13 @@
 // Small admin commands for the server's terminal:
 //   node dist/cli.cjs import <file.xls>         import a punch file
 //   node dist/cli.cjs add-user <email> <name> <admin|viewer> <password>
+//   node dist/cli.cjs reset-password <email> <new-password>
 //   node dist/cli.cjs run                       run the automatic jobs once
 import fs from 'node:fs';
 import path from 'node:path';
 import { importPunchFile } from './import/importer.ts';
-import { createUser } from './api/auth.ts';
+import { createUser, resetPassword } from './api/auth.ts';
+import { db } from './db.ts';
 import { runAll } from './jobs.ts';
 import { closeDb } from './db.ts';
 
@@ -19,10 +21,15 @@ try {
   } else if (cmd === 'add-user' && args.length >= 4) {
     await createUser(args[1], args[0], args[3], args[2]);
     console.log(`Added ${args[0]}.`);
+  } else if (cmd === 'reset-password' && args.length >= 2) {
+    const u = await (await db())('users').where({ email: args[0].trim().toLowerCase() }).first();
+    if (!u) throw new Error(`No account for ${args[0]}.`);
+    await resetPassword(Number(u.id), args[1]);
+    console.log(`New password set for ${u.email}.`);
   } else if (cmd === 'run') {
     for (const line of await runAll()) console.log(line);
   } else {
-    console.log('Commands: import <file>, add-user <email> <name> <admin|viewer> <password>, run');
+    console.log('Commands: import <file>, add-user <email> <name> <admin|viewer> <password>, reset-password <email> <new-password>, run');
   }
 } catch (e) {
   console.error((e as Error).message);

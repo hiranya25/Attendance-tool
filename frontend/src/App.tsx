@@ -143,7 +143,10 @@ export function App() {
             {usingSampleData && <span className="pill t-warn" title="Names and numbers are invented for the demo">Sample data</span>}
             <ThemeToggle />
             {!usingSampleData && state.ref.user && (
-              <button className="btn sm" onClick={() => void state.signOut()} title={`Signed in as ${state.ref.user.email}`}>Sign out {state.ref.user.name.split(' ')[0]}</button>
+              <>
+                <button className="btn sm" onClick={() => setDrawer({ kind: 'account' })}>My password</button>
+                <button className="btn sm" onClick={() => void state.signOut()} title={`Signed in as ${state.ref.user.email}`}>Sign out {state.ref.user.name.split(' ')[0]}</button>
+              </>
             )}
           </div>
           <main>

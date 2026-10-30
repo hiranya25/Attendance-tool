@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response, Router } from 'express';
 import type { Connections, Employee, Holiday, Reference, Settings, Shift, TrendPoint, User } from '../../../shared/types.ts';
-import { config, today } from '../config.ts';
+import { config, now, today } from '../config.ts';
 import { db } from '../db.ts';
 import * as R from '../repo.ts';
 import * as D from '../engine/dates.ts';
@@ -12,7 +12,8 @@ import { isUnexplained, totals } from '../reports/summary.ts';
 import { buildPackage, runAll } from '../jobs.ts';
 import { graphConfigured } from '../mail/graph.ts';
 import { aiConfigured, aiName } from '../ai/emailReader.ts';
-import { createUser, currentUser, HttpError, needsSetup, requireUser, signIn, signOut } from './auth.ts';
+import { logError } from '../log.ts';
+import { changeOwnPassword, createUser, currentUser, HttpError, needsSetup, PASSWORD_RULE, requireUser, resetPassword, signIn, signOut } from './auth.ts';
 
 type Handler = (req: Request, res: Response) => Promise<unknown>;
 const h = (fn: Handler) => (req: Request, res: Response, next: NextFunction) => fn(req, res).then((out) => { if (!res.headersSent) res.json(out ?? { ok: true }); }).catch(next);
@@ -26,18 +27,30 @@ export function apiRouter(): Router {
   const user = requireUser();
   const admin = requireUser(true);
 
+  // For uptime checks: no sign-in needed, and it shows nothing private.
+  api.get('/health', h(async (_req, res) => {
+    let database = 'ok';
+    try { await (await db()).raw('select 1'); } catch (e) { database = 'not reachable'; logError('health', e); }
+    const last = await R.getState('last_run').catch(() => null);
+    res.status(database === 'ok' ? 200 : 503);
+    return { ok: database === 'ok', database, lastAutomaticRun: last ? (JSON.parse(last) as { at: string }).at : null, time: now() };
+  }));
+
   // Sign-in
-  api.get('/session', h(async (req) => ({ user: await currentUser(req), needsSetup: await needsSetup() })));
+  api.get('/session', h(async (req) => ({ user: await currentUser(req), needsSetup: await needsSetup(), passwordRule: PASSWORD_RULE })));
+  api.put('/me/password', user, h(async (req, res) => {
+    await changeOwnPassword(req, res.locals.user as User, req.body?.current, req.body?.password);
+  }));
   api.post('/setup', h(async (req, res) => {
     if (req.get('X-Requested-With') !== 'AttendanceDesk') throw new HttpError(403, 'Request blocked.');
     if (!(await needsSetup())) throw new HttpError(400, 'Setup is already done. Sign in instead.');
     const { name, email, password } = req.body ?? {};
     await createUser(name, email, password, 'admin');
-    return { user: await signIn(res, email, password) };
+    return { user: await signIn(res, email, password, req.ip) };
   }));
   api.post('/login', h(async (req, res) => {
     if (req.get('X-Requested-With') !== 'AttendanceDesk') throw new HttpError(403, 'Request blocked.');
-    return { user: await signIn(res, String(req.body?.email ?? ''), String(req.body?.password ?? '')) };
+    return { user: await signIn(res, String(req.body?.email ?? ''), String(req.body?.password ?? ''), req.ip) };
   }));
   api.post('/logout', h(async (req, res) => { await signOut(req, res); }));
 
@@ -79,6 +92,11 @@ export function apiRouter(): Router {
   api.get('/imports', user, h(async () => (await (await db())('imports').orderBy('id', 'desc').limit(100)).map((i) => ({
     id: Number(i.id), month: i.month, fileName: i.file_name, source: i.source, importedAt: i.imported_at, importedBy: i.imported_by, people: Number(i.people), days: Number(i.days),
   }))));
+  api.get('/notifications/:id', user, h(async (req) => {
+    const n = await (await db())('notifications').where({ id: Number(String(req.params.id).replace(/^N/, '')) }).first();
+    if (!n) throw new HttpError(404, 'That message is not on record.');
+    return { subject: n.subject, to: n.to_addr, at: n.at, sent: Boolean(Number(n.sent)), error: n.error || null, html: n.body };
+  }));
   api.get('/connections', user, h(async (): Promise<Connections> => {
     const last = await R.getState('last_run');
     const parsed = last ? (JSON.parse(last) as { at: string; lines: string[] }) : null;
@@ -167,6 +185,12 @@ export function apiRouter(): Router {
   api.post('/jobs/run', admin, h(async () => ({ lines: await runAll() })));
   api.get('/users', admin, h(async () => (await (await db())('users').select('id', 'email', 'name', 'role').orderBy('name')).map((u) => ({ ...u, id: Number(u.id) }))));
   api.post('/users', admin, h(async (req) => ({ id: await createUser(req.body?.name, req.body?.email, req.body?.password, req.body?.role) })));
+  api.put('/users/:id/password', admin, h(async (req, res) => {
+    const id = Number(req.params.id);
+    await resetPassword(id, req.body?.password);
+    const u = await (await db())('users').where({ id }).first();
+    await R.audit(who(res), 'User accounts', '', `New password set for ${u?.email ?? id}`, 'Set on the Rules page. Their other sign-ins were ended.', 'Settings');
+  }));
   api.delete('/users/:id', admin, h(async (req, res) => {
     const id = Number(req.params.id);
     if (id === (res.locals.user as User).id) throw new HttpError(400, 'You cannot remove your own account.');
@@ -178,7 +202,7 @@ export function apiRouter(): Router {
   api.use((_req, _res, next) => next(new HttpError(404, 'Not found.')));
   api.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     const status = err instanceof HttpError ? err.status : (err as { status?: number })?.status ?? 500;
-    if (status >= 500) console.error(err);
+    if (status >= 500) logError(`${_req.method} ${_req.originalUrl}`, err);
     res.status(status).json({ error: status >= 500 ? 'Something went wrong on the server. Try again, and check the server log if it keeps happening.' : (err as Error).message });
   });
   return api;

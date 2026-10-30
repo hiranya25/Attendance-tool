@@ -5,7 +5,9 @@ export type DrawerTarget =
   | { kind: 'issue'; id: string }
   | { kind: 'day'; employeeId: string; date: string }
   | { kind: 'person'; employeeId: string }
-  | { kind: 'email'; id: string };
+  | { kind: 'email'; id: string }
+  | { kind: 'account' }
+  | { kind: 'message'; id: string };
 
 export interface AppState {
   ref: Reference;

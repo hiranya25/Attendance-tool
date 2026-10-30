@@ -2,7 +2,8 @@
 import { runAll } from './jobs.ts';
 import { closeDb } from './db.ts';
 import { now } from './config.ts';
+import { logError } from './log.ts';
 
 runAll((line) => console.log(`[${now()}] ${line}`))
-  .catch((e) => { console.error(`[${now()}] Run failed:`, e); process.exitCode = 1; })
+  .catch((e) => { logError('automatic run', e); process.exitCode = 1; })
   .finally(() => closeDb());

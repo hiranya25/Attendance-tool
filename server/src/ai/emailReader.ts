@@ -51,6 +51,9 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
+/** The AI service said "too many requests". The email is read again on a later run. */
+export class AiBusyError extends Error {}
+
 export const aiConfigured = () => Boolean(aiSettings().apiKey);
 export const aiName = () => {
   const a = aiSettings();
@@ -101,7 +104,7 @@ async function readWithOpenAiStyle(prompt: string, codes: Set<string>): Promise<
     signal: AbortSignal.timeout(180_000),
   });
   const raw = await res.text();
-  if (res.status === 429) throw new Error('The AI service is busy (rate limit). It will be tried again on the next run.');
+  if (res.status === 429) throw new AiBusyError('The AI service is busy (rate limit). It will be read again on the next run.');
   if (!res.ok) throw new Error(`The AI service answered ${res.status}: ${raw.slice(0, 200)}`);
   const body = JSON.parse(raw) as { choices?: { message?: { content?: string | null }; finish_reason?: string }[] };
   const choice = body.choices?.[0];

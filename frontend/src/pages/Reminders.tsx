@@ -47,7 +47,10 @@ export function Reminders() {
                     <td className="nowrap mono small">{fmtWhen(n.at)}</td>
                     <td className="nowrap"><Pill tone={TONE[n.audience]}>{n.audience}</Pill> <span className="mono small">{n.to}</span>{n.sent === false && <span className="sub" title={n.error ?? ''}>Not sent: {n.error}</span>}</td>
                     <td className="wide">{n.subject}</td>
-                    <td>{n.issueIds.length > 0 && <button className="btn sm" onClick={() => open({ kind: 'issue', id: n.issueIds[0] })}>View issue</button>}</td>
+                    <td className="nowrap">
+                      <button className="btn sm" onClick={() => open({ kind: 'message', id: n.id })}>Preview</button>{' '}
+                      {n.issueIds.length > 0 && <button className="btn sm" onClick={() => open({ kind: 'issue', id: n.issueIds[0] })}>View issue</button>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

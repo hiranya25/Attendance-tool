@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Employee } from '../../shared/types.ts';
 import { config, now, storage, today } from './config.ts';
+import { logError } from './log.ts';
 import { db, insertId } from './db.ts';
 import * as R from './repo.ts';
 import * as D from './engine/dates.ts';
@@ -10,7 +11,7 @@ import { buildMonth, issueKey, NOTIFY_TYPES } from './engine/monthBuilder.ts';
 import { importPunchFile } from './import/importer.ts';
 import { attachments, graphConfigured, messagesSince } from './mail/graph.ts';
 import { esc, layout, send } from './mail/mailer.ts';
-import { aiConfigured, aiName, readEmail } from './ai/emailReader.ts';
+import { AiBusyError, aiConfigured, aiName, readEmail } from './ai/emailReader.ts';
 import { writeWorkbook } from './reports/excel.ts';
 import { needsAttention, summaryLines } from './reports/summary.ts';
 
@@ -25,7 +26,7 @@ export async function runAll(log: (m: string) => void = () => {}): Promise<strin
   try {
     for (const [name, fn] of [['Mailbox', readMailbox], ['Reminders', sendReminders], ['HR summary', sendDigest], ['Month close', closeMonths]] as const) {
       let line: string;
-      try { line = `${name}: ${await fn()}`; } catch (e) { line = `${name} failed: ${(e as Error).message}`; }
+      try { line = `${name}: ${await fn()}`; } catch (e) { line = `${name} failed: ${(e as Error).message}`; logError(`automatic run: ${name}`, e); }
       lines.push(line);
       log(line);
     }
@@ -43,6 +44,7 @@ export async function readMailbox(): Promise<string> {
   const rules = await R.getRules();
   const employees = await R.getEmployees();
   const own = [config().microsoft.mailbox, config().microsoft.sender].map((a) => a.toLowerCase());
+  const pacer = new AiPacer();
   let since = (await R.getState('mail_since')) ?? new Date(Date.now() - 3 * 86400_000).toISOString().replace(/\.\d+Z$/, 'Z');
   let done = 0;
   for (const msg of await messagesSince(since)) {
@@ -67,7 +69,7 @@ export async function readMailbox(): Promise<string> {
         }
       }
     }
-    if (!handled) Object.assign(row, await readWithAi(row as { from_addr: string; received_at: string; subject: string; body: string }, employees));
+    if (!handled) Object.assign(row, await readWithAi(row as { from_addr: string; received_at: string; subject: string; body: string }, employees, pacer));
     await k('emails').insert(row);
     done++;
   }
@@ -75,17 +77,50 @@ export async function readMailbox(): Promise<string> {
 
   let retried = 0;
   for (const old of await k('emails').whereNot({ error: '' }).whereNot({ kind: 'attendance_file' }).orderBy('id').limit(10)) {
-    const fields = await readWithAi(old, employees);
+    if (!pacer.canCall()) break;
+    const fields = await readWithAi(old, employees, pacer);
     if (!fields.error) retried++;
     await k('emails').where({ id: old.id }).update(fields);
   }
-  return `${done} new ${done === 1 ? 'email' : 'emails'}${retried ? `, ${retried} read on retry` : ''}.`;
+  return `${done} new ${done === 1 ? 'email' : 'emails'}${retried ? `, ${retried} read on retry` : ''}${pacer.note()}.`;
 }
 
-async function readWithAi(row: { from_addr: string; received_at: string; subject: string; body: string }, employees: Employee[]) {
+/**
+ * Keeps within the AI service's limits (the free NVIDIA key allows only a few requests a minute):
+ * a pause between emails, a cap per 15-minute run, and no more calls once the service says it is busy.
+ * Anything not read now is kept and read on a later run.
+ */
+class AiPacer {
+  private calls = 0;
+  private busy = false;
+  private readonly max = config().ai.maxPerRun ?? 20;
+  private readonly pauseMs = (config().ai.pauseSeconds ?? (config().ai.provider === 'nvidia' ? 3 : 0)) * 1000;
+
+  canCall() { return !this.busy && this.calls < this.max; }
+
+  async call<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.calls > 0 && this.pauseMs) await new Promise((r) => setTimeout(r, this.pauseMs));
+    this.calls++;
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof AiBusyError) this.busy = true;
+      throw e;
+    }
+  }
+
+  note() {
+    if (this.busy) return '; the AI service was busy, the rest will be read on the next run';
+    if (this.calls >= this.max) return `; reached ${this.max} AI reads for this run, the rest will be read on the next run`;
+    return '';
+  }
+}
+
+async function readWithAi(row: { from_addr: string; received_at: string; subject: string; body: string }, employees: Employee[], pacer: AiPacer) {
   if (!aiConfigured()) return { error: `The AI API key is not set in config.json (${aiName()}).` };
+  if (!pacer.canCall()) return { error: 'Waiting to be read: the AI limit for this run was reached. It will be read on the next run.' };
   try {
-    const r = await readEmail({ from: row.from_addr, receivedAt: row.received_at, subject: row.subject, body: row.body }, employees);
+    const r = await pacer.call(() => readEmail({ from: row.from_addr, receivedAt: row.received_at, subject: row.subject, body: row.body }, employees));
     return {
       is_attendance: r.is_attendance ? 1 : 0, kind: r.kind, detected: r.label || r.kind.replace(/_/g, ' '), emp_code: r.employee_code || null,
       dates: JSON.stringify(r.dates), half_day: r.half_day ? 1 : 0, confidence: r.confidence, warning: r.warning, processed_at: now(), error: '',
