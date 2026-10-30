@@ -26,10 +26,10 @@ Updated 29 Oct 2026.
 2. **Microsoft 365 admin** to register the app for hr@amipi.com (`docs/DEPLOY.md`, step 6).
 3. **NVIDIA API key** from build.nvidia.com (step 7).
 4. **October so far:** export October from the punch system now and upload it. A newer file replaces it later.
-4. **Shift times:** the 7 shift codes (G, D, S1, E1, E4, G2, P1) are estimated from September data. Jainam should confirm them on the Rules page.
-5. **Holiday dates to confirm:** Mumbai's Diwali week, Mumbai's Paryushan last day (not added yet), and whether US Independence Day (Sat 4 Jul) had a Friday off.
-6. **Employee emails and joining dates**, so reminders reach people and new joiners are handled correctly.
-7. **Who receives the monthly report.**
+5. **Shift times:** the 7 shift codes (G, D, S1, E1, E4, G2, P1) are estimated from September data. Jainam should confirm them on the Rules page.
+6. **Holiday dates to confirm:** Mumbai's Diwali week, Mumbai's Paryushan last day (not added yet), and whether US Independence Day (Sat 4 Jul) had a Friday off.
+7. **Employee emails and joining dates**, so reminders reach people and new joiners are handled correctly.
+8. **Who receives the monthly report.**
 
 ## Open questions (only if they matter)
 
