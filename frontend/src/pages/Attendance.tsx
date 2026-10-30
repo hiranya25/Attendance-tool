@@ -47,7 +47,7 @@ export function Attendance() {
       </div>
       <Panel flush>
         <div className="scroll">
-          <table className="grid-cal">
+          <table className="grid-cal no-stack">
             <thead>
               <tr>
                 <th className="nm">Person</th>
