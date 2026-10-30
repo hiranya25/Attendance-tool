@@ -56,10 +56,14 @@ src/
   api/http.ts       Real backend client, used when VITE_API_URL is set.
   api/index.ts      Picks sample data or the real backend.
   mock/             Sample data and a simulator that plays the backend's role.
-  lib/              Date formatting, totals, CSV export.
+  lib/              Date formatting, totals, CSV export, and stackTables.ts (see below).
   components/       Shared UI pieces and the bar chart.
   pages/            One file per screen, plus the side drawers.
 ```
+
+## Small windows and phones
+
+Every table inside a `.scroll` wrapper switches to one card per row, each value labelled with its column heading, whenever it does not fit its panel. `lib/stackTables.ts` measures this, so it adapts to the actual window, not to fixed breakpoints. The attendance grid (`.no-stack`) scrolls sideways instead.
 
 ## Talking to the server
 

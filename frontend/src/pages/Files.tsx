@@ -78,7 +78,7 @@ export function Files() {
                     <tr key={f.id}>
                       <td className="nowrap"><b>{fmtMonth(f.month)}</b> {current ? <Pill tone="ok">In use</Pill> : <Pill tone="mute">Replaced</Pill>}</td>
                       <td className="mono small wide">{f.fileName}<span className="sub">{(f.scope ?? 'punch') === 'punch' ? 'Punch export' : 'Mumbai sheet'}</span></td>
-                      <td className="nowrap">{f.source === 'email' ? 'Email' : 'Upload'} <span className="muted small">{f.importedBy}</span></td>
+                      <td>{f.source === 'email' ? 'Email' : 'Upload'}<span className="sub">{f.importedBy}</span></td>
                       <td className="nowrap mono small">{fmtWhen(f.importedAt)}</td>
                       <td className="num">{f.people}</td>
                       <td className="num">{f.days}</td>

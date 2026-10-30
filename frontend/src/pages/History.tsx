@@ -79,10 +79,12 @@ export function History() {
                           </div>
                         ) : <span className="muted small">Not closed yet</span>}
                       </td>
-                      <td className="nowrap">
-                        <button className="btn sm" onClick={() => openMonth(r.month, 'overview')}>Open</button>{' '}
-                        <button className="btn sm" onClick={() => openMonth(r.month, 'reports')}>Report</button>{' '}
-                        <button className="btn sm" onClick={() => download(api.exportUrl(r.month, 'all'), `attendance-${r.month}.csv`, () => [])}>Excel</button>
+                      <td>
+                        <div className="row-gap">
+                          <button className="btn sm" onClick={() => openMonth(r.month, 'overview')}>Open</button>
+                          <button className="btn sm" onClick={() => openMonth(r.month, 'reports')}>Report</button>
+                          <button className="btn sm" onClick={() => download(api.exportUrl(r.month, 'all'), `attendance-${r.month}.csv`, () => [])}>Excel</button>
+                        </div>
                       </td>
                     </tr>
                   ))}

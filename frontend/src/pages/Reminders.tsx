@@ -45,11 +45,13 @@ export function Reminders() {
                 {list.map((n) => (
                   <tr key={n.id}>
                     <td className="nowrap mono small">{fmtWhen(n.at)}</td>
-                    <td className="nowrap"><Pill tone={TONE[n.audience]}>{n.audience}</Pill> <span className="mono small">{n.to}</span>{n.sent === false && <span className="sub" title={n.error ?? ''}>Not sent: {n.error}</span>}</td>
+                    <td><Pill tone={TONE[n.audience]}>{n.audience}</Pill><span className="sub mono">{n.to}</span>{n.sent === false && <span className="sub" title={n.error ?? ''}>Not sent: {n.error}</span>}</td>
                     <td className="wide">{n.subject}</td>
-                    <td className="nowrap">
-                      <button className="btn sm" onClick={() => open({ kind: 'message', id: n.id })}>Preview</button>{' '}
-                      {n.issueIds.length > 0 && <button className="btn sm" onClick={() => open({ kind: 'issue', id: n.issueIds[0] })}>View issue</button>}
+                    <td>
+                      <div className="row-gap">
+                        <button className="btn sm" onClick={() => open({ kind: 'message', id: n.id })}>Preview</button>
+                        {n.issueIds.length > 0 && <button className="btn sm" onClick={() => open({ kind: 'issue', id: n.issueIds[0] })}>View issue</button>}
+                      </div>
                     </td>
                   </tr>
                 ))}
