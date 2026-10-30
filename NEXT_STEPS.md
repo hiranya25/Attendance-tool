@@ -7,7 +7,7 @@ Updated 30 Oct 2026.
 - **Screens and server**, ready for InMotion cPanel (Node.js + PostgreSQL). Setup steps: `docs/DEPLOY.md`.
 - **Reads the punch system's monthly file** ("Month Date Wise Performance", .xls). Tested on the real September 2026 file: 22 people, 660 days.
 - **Fully automatic, no approvals.** Holidays, joiners and leavers, HR emails and late punches are applied by the tool. Every change is logged and the original data is kept.
-- **HR emails** at hr@amipi.com (Outlook) are read by an AI model (NVIDIA Nemotron, free key). Attendance files sent as attachments are imported automatically.
+- **HR emails** sent to the hr@amipi.com group are read from a shared mailbox that is a member of the group (Outlook), by an AI model (NVIDIA Nemotron, free key). Attendance files sent as attachments are imported automatically.
 - **Reminders** go to employees, a daily summary to HR, and alerts for long absences and likely device problems.
 - **Month close:** the Excel package (summary, master sheet, daily detail, issues, emails, change log) is saved on the site and emailed to the people you choose. If a newer file arrives later, a revised version is sent.
 - **Holiday calendars** from HR's lists: US holidays (NY office and remote), NY shift (India), India day shift, and Mumbai office.
@@ -35,7 +35,7 @@ Updated 30 Oct 2026.
 ## What I still need from you
 
 1. **Deploy access:** do the steps in `docs/DEPLOY.md`, or give me what is needed and I'll walk you through it.
-2. **Microsoft 365 admin** to register the app for hr@amipi.com (`docs/DEPLOY.md`, step 6).
+2. **Microsoft 365 admin:** hr@amipi.com is a group, not a mailbox. Create a shared mailbox (for example attendance@amipi.com), add it to the hr@ group, and register the app for it (`docs/DEPLOY.md`, step 6; message to forward in `docs/CHECKLISTS.md`).
 3. **NVIDIA API key** from build.nvidia.com (step 7).
 4. **October so far:** export October from the punch system now and upload it. A newer file replaces it later.
 5. **Shift times:** Full Time (G) and New York are confirmed. **Day Time (D) timing from Lokesh**; the remote shift codes (S1, E1, E4, G2, P1) and Mumbai's end time are still estimates.

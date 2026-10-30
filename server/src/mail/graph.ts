@@ -76,6 +76,7 @@ export async function sendMail(to: string[], subject: string, html: string, file
       subject,
       body: { contentType: 'HTML', content: html },
       toRecipients: to.map((address) => ({ emailAddress: { address } })),
+      ...(config().microsoft.replyTo ? { replyTo: [{ emailAddress: { address: config().microsoft.replyTo } }] } : {}),
       attachments: files.map((f) => ({
         '@odata.type': '#microsoft.graph.fileAttachment', name: f.name,
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', contentBytes: fs.readFileSync(f.path).toString('base64'),

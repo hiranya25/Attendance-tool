@@ -43,7 +43,7 @@ export async function readMailbox(): Promise<string> {
   const k = await db();
   const rules = await R.getRules();
   const employees = await R.getEmployees();
-  const own = [config().microsoft.mailbox, config().microsoft.sender].map((a) => a.toLowerCase());
+  const own = [config().microsoft.mailbox, config().microsoft.sender].filter(Boolean).map((a) => a.toLowerCase());
   const pacer = new AiPacer();
   let since = (await R.getState('mail_since')) ?? new Date(Date.now() - 3 * 86400_000).toISOString().replace(/\.\d+Z$/, 'Z');
   let done = 0;
