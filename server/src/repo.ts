@@ -3,7 +3,7 @@ import { db } from './db.ts';
 import { now, today } from './config.ts';
 import { OFFICES, RULES } from './seed.ts';
 
-export interface ImportRow { id: number; month: string; file_name: string; stored_path: string; source: string; imported_at: string; imported_by: string; people: number; days: number }
+export interface ImportRow { id: number; scope: string; month: string; file_name: string; stored_path: string; source: string; imported_at: string; imported_by: string; people: number; days: number }
 export interface RawRow { emp_code: string; date: string; shift: string; in_min: number | null; out_min: number | null; work_min: number; ot_min: number; less_min: number; status: string; remark: string }
 
 export async function getRules(): Promise<Settings> {
@@ -16,9 +16,26 @@ export async function saveRules(r: Settings) {
   await k('settings').where({ name: 'rules' }).update({ value: JSON.stringify(r) });
 }
 
+/** Offices with their rules. Offices saved before per-office rules existed take the defaults. */
 export async function getOffices(): Promise<Office[]> {
   const row = await (await db())('settings').where({ name: 'offices' }).first();
-  return row ? JSON.parse(row.value) : OFFICES;
+  const stored: Office[] = row ? JSON.parse(row.value) : [];
+  const out = OFFICES.map((d) => {
+    const s = stored.find((o) => o.id === d.id);
+    return s && s.mode ? { ...d, ...s } : d;
+  });
+  for (const s of stored) if (!out.some((o) => o.id === s.id)) out.push(s);
+  return out;
+}
+
+export async function saveOffices(offices: Office[]) {
+  const k = await db();
+  const n = await k('settings').where({ name: 'offices' }).update({ value: JSON.stringify(offices) });
+  if (!n) await k('settings').insert({ name: 'offices', value: JSON.stringify(offices) });
+}
+
+export function officeOf(offices: Office[], id: string): Office {
+  return offices.find((o) => o.id === id) ?? OFFICES[0];
 }
 
 export function deptLabel(dept: string): string {
@@ -30,6 +47,7 @@ export async function getEmployees(): Promise<Employee[]> {
   return rows.map((e) => ({
     id: e.code, name: e.name, officeId: e.office_id, department: deptLabel(e.department), email: e.email,
     joinDate: e.join_date || null, exitDate: e.exit_date || null, shiftCode: e.shift_code, calendarId: e.calendar_id, aliases: e.aliases,
+    manager: e.manager ?? '', role: e.role ?? '', location: e.location ?? '', workHours: e.work_hours ?? '', tracked: e.tracked == null ? true : Boolean(Number(e.tracked)),
   }));
 }
 
@@ -56,12 +74,25 @@ export async function getMonths(): Promise<string[]> {
   return [...set].sort();
 }
 
-export async function latestImport(month: string): Promise<ImportRow | undefined> {
-  return (await db())('imports').where({ month }).orderBy('id', 'desc').first();
+/** The newest file of each kind for a month: one punch export and one Mumbai sheet can both be in use. */
+export async function latestImports(month: string): Promise<ImportRow[]> {
+  const rows: ImportRow[] = await (await db())('imports').where({ month }).orderBy('id', 'desc');
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const scope = r.scope || 'punch';
+    if (seen.has(scope)) return false;
+    seen.add(scope);
+    return true;
+  });
 }
 
-export async function previousImport(month: string, beforeId: number): Promise<ImportRow | undefined> {
-  return (await db())('imports').where({ month }).andWhere('id', '<', beforeId).orderBy('id', 'desc').first();
+/** The newest import of any kind for a month, or undefined when the month has no data. */
+export async function latestImport(month: string): Promise<ImportRow | undefined> {
+  return (await latestImports(month))[0];
+}
+
+export async function previousImport(month: string, beforeId: number, scope = 'punch'): Promise<ImportRow | undefined> {
+  return (await db())('imports').where({ month, scope }).andWhere('id', '<', beforeId).orderBy('id', 'desc').first();
 }
 
 export async function rawDays(importId: number): Promise<RawRow[]> {

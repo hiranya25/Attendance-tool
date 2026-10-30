@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response, Router } from 'express';
-import type { Connections, Employee, Holiday, Reference, Settings, Shift, TrendPoint, User } from '../../../shared/types.ts';
+import type { Connections, Employee, Holiday, Office, Reference, Settings, Shift, TrendPoint, User } from '../../../shared/types.ts';
 import { config, now, today } from '../config.ts';
 import { db } from '../db.ts';
 import * as R from '../repo.ts';
 import * as D from '../engine/dates.ts';
 import { buildMonth } from '../engine/monthBuilder.ts';
-import { importPunchFile } from '../import/importer.ts';
+import { importFile } from '../import/importer.ts';
 import { writeWorkbook, type ExcelPart } from '../reports/excel.ts';
 import { isUnexplained, totals } from '../reports/summary.ts';
 import { buildPackage, runAll } from '../jobs.ts';
@@ -90,7 +90,7 @@ export function apiRouter(): Router {
     sendFile(res, fs.readFileSync(rp.path), `Attendance-${rp.month}-v${rp.version}.xlsx`);
   }));
   api.get('/imports', user, h(async () => (await (await db())('imports').orderBy('id', 'desc').limit(100)).map((i) => ({
-    id: Number(i.id), month: i.month, fileName: i.file_name, source: i.source, importedAt: i.imported_at, importedBy: i.imported_by, people: Number(i.people), days: Number(i.days),
+    id: Number(i.id), scope: i.scope || 'punch', month: i.month, fileName: i.file_name, source: i.source, importedAt: i.imported_at, importedBy: i.imported_by, people: Number(i.people), days: Number(i.days),
   }))));
   api.get('/notifications/:id', user, h(async (req) => {
     const n = await (await db())('notifications').where({ id: Number(String(req.params.id).replace(/^N/, '')) }).first();
@@ -107,11 +107,11 @@ export function apiRouter(): Router {
   api.post('/imports', admin, express.raw({ type: 'application/octet-stream', limit: '25mb' }), h(async (req, res) => {
     const name = decodeURIComponent(req.get('X-File-Name') ?? 'upload.xls');
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw new HttpError(400, 'Choose a file to upload.');
-    if (!/\.xlsx?$/i.test(name)) throw new HttpError(400, 'Upload the .xls or .xlsx file exported from the punch system.');
+    if (!/\.(xlsx?|ods)$/i.test(name)) throw new HttpError(400, 'Upload an .xls, .xlsx or .ods file: the punch system export, the Mumbai sheet, or the team list.');
     try {
-      return await importPunchFile(req.body, name, 'upload', who(res));
+      return await importFile(req.body, name, 'upload', who(res));
     } catch (e) {
-      throw new HttpError(400, `This file could not be read. Upload the "Month Date Wise Performance" export from the punch system. (${(e as Error).message})`);
+      throw new HttpError(400, (e as Error).message);
     }
   }));
   api.put('/settings', admin, h(async (req, res) => {
@@ -139,6 +139,35 @@ export function apiRouter(): Router {
       }
     }
   }));
+  api.put('/offices', admin, h(async (req, res) => {
+    const list = req.body as Office[];
+    if (!Array.isArray(list)) throw new HttpError(400, 'Expected a list of offices.');
+    const before = await R.getOffices();
+    const next = before.map((o) => {
+      const n = list.find((x) => x.id === o.id);
+      if (!n) return o;
+      const num = (v: unknown, min: number, max: number, label: string) => {
+        const x = Number(v);
+        if (!Number.isFinite(x) || x < min || x > max) throw new HttpError(400, `${o.name}: ${label} must be between ${min} and ${max}.`);
+        return x;
+      };
+      return {
+        ...o,
+        graceMinutes: num(n.graceMinutes, 0, 240, 'grace'),
+        lateAllowance: num(n.lateAllowance, 0, 31, 'late marks allowed'),
+        weeklyOff: [...new Set((n.weeklyOff ?? []).map(Number).filter((d) => d >= 0 && d <= 6))].sort(),
+        lateBeyondNote: String(n.lateBeyondNote ?? '').slice(0, 300),
+      };
+    });
+    await R.saveOffices(next);
+    const days = (w?: number[]) => (w ?? []).map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ') || 'none';
+    for (const o of next) {
+      const b = before.find((x) => x.id === o.id)!;
+      if (b.graceMinutes !== o.graceMinutes) await R.audit(who(res), `${o.name}: late grace`, `${b.graceMinutes} min`, `${o.graceMinutes} min`, 'Changed on the Rules page.', 'Settings');
+      if (b.lateAllowance !== o.lateAllowance) await R.audit(who(res), `${o.name}: late marks allowed`, String(b.lateAllowance), String(o.lateAllowance), 'Changed on the Rules page.', 'Settings');
+      if (days(b.weeklyOff) !== days(o.weeklyOff)) await R.audit(who(res), `${o.name}: weekly off`, days(b.weeklyOff), days(o.weeklyOff), 'Changed on the Rules page.', 'Settings');
+    }
+  }));
   api.put('/holidays', admin, h(async (req, res) => {
     const list = req.body as Holiday[];
     if (!Array.isArray(list) || list.some((x) => !DATE.test(x.date) || !x.name?.trim() || !x.calendar)) throw new HttpError(400, 'Each holiday needs a date, a name and a calendar.');
@@ -160,7 +189,12 @@ export function apiRouter(): Router {
     const old = await k('employees').where({ code }).first();
     if (!old) throw new HttpError(404, 'No such person.');
     const b = req.body as Partial<Employee>;
-    const map: [keyof Employee, string, string][] = [['email', 'email', 'Email'], ['officeId', 'office_id', 'Office'], ['calendarId', 'calendar_id', 'Holiday calendar'], ['shiftCode', 'shift_code', 'Usual shift'], ['joinDate', 'join_date', 'Joining date'], ['exitDate', 'exit_date', 'Leaving date'], ['aliases', 'aliases', 'Other names']];
+    const map: [keyof Employee, string, string][] = [['email', 'email', 'Email'], ['officeId', 'office_id', 'Office'], ['calendarId', 'calendar_id', 'Holiday calendar'], ['shiftCode', 'shift_code', 'Usual shift'], ['joinDate', 'join_date', 'Joining date'], ['exitDate', 'exit_date', 'Leaving date'], ['aliases', 'aliases', 'Other names'], ['manager', 'manager', 'Manager'], ['role', 'role', 'Role']];
+    let tracked: number | null = null;
+    if ('tracked' in b && Boolean(b.tracked) !== Boolean(Number(old.tracked ?? 1))) {
+      tracked = b.tracked ? 1 : 0;
+      await R.audit(who(res), `${old.name}: Tracked`, Number(old.tracked ?? 1) ? 'Yes' : 'No', b.tracked ? 'Yes' : 'No', 'Changed on the People page.', 'People page', code);
+    }
     const update: Record<string, string | null> = {};
     for (const [field, col, label] of map) {
       if (!(field in b)) continue;
@@ -174,7 +208,7 @@ export function apiRouter(): Router {
       update[col] = after;
       await R.audit(who(res), `${old.name}: ${label}`, String(before ?? '') || 'empty', after || 'empty', 'Changed on the People page.', 'People page', code);
     }
-    if (Object.keys(update).length) await k('employees').where({ code }).update({ ...update, updated_at: today() });
+    if (Object.keys(update).length || tracked !== null) await k('employees').where({ code }).update({ ...update, ...(tracked !== null ? { tracked } : {}), updated_at: today() });
   }));
   api.post('/months/:month/package', admin, h(async (req) => {
     const m = month(req);

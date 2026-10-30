@@ -35,6 +35,7 @@ export function httpApi(base: string): AttendanceApi {
     saveSettings: (s) => call('/settings', put(s)),
     saveHolidays: (h) => call('/holidays', put(h)),
     saveShifts: (s) => call('/shifts', put(s)),
+    saveOffices: (o) => call('/offices', put(o)),
     saveEmployee: (id, changes) => call(`/employees/${encodeURIComponent(id)}`, put(changes)),
     uploadImport: (file) => call('/imports', { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }),
     buildPackage: (month) => call(`/months/${month}/package`, post()),

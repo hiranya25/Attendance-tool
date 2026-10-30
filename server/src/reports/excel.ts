@@ -5,8 +5,8 @@ import { codeLabel } from '../engine/monthBuilder.ts';
 import * as D from '../engine/dates.ts';
 import { patterns, summaryLines, totals } from './summary.ts';
 
-const STATE: Record<string, string> = { open: 'Open', reminded: 'Reminder sent', unclear: 'Communicated, unclear', explained: 'Explained by email', fixed: 'Fixed by later data', system: 'Likely system issue' };
-const FILL: Record<string, string> = { P: 'D9F0E2', HD: 'F8EBC8', A: 'F9DFDB', LV: 'D3EBE7', HL: 'DDE7F6', WO: 'E7ECEE', NR: 'F8EBC8', NE: 'F1F4F5' };
+const STATE: Record<string, string> = { open: 'Open', reminded: 'Reminder sent', unclear: 'Communicated, unclear', explained: 'Explained by email', fixed: 'Fixed by later data', system: 'Likely system issue', allowed: 'Within allowance' };
+const FILL: Record<string, string> = { P: 'D9F0E2', HD: 'F8EBC8', A: 'F9DFDB', LV: 'D3EBE7', HL: 'DDE7F6', WO: 'E7ECEE', NR: 'F8EBC8', NE: 'F1F4F5', NT: 'F1F4F5' };
 const HEAD_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7ECEE' } };
 
 export type ExcelPart = 'all' | 'master' | 'issues';
@@ -30,7 +30,7 @@ export async function writeWorkbook(data: MonthData, employees: Employee[], offi
     for (const line of summaryLines(data, emps)) s.addRow([`• ${line}`]);
     s.addRow([]);
     s.addRow(['Repeat patterns']).font = { bold: true };
-    head(s.addRow(['Person', 'Late arrivals', 'Unexplained absences', 'Missing punches']));
+    head(s.addRow(['Person', 'Late marks beyond allowance', 'Unexplained absences', 'Missing punches']));
     for (const [id, p] of Object.entries(patterns(data.issues))) s.addRow([name(id), p.lates, p.unexplained, p.punches]);
   }
 
@@ -52,7 +52,7 @@ export async function writeWorkbook(data: MonthData, employees: Employee[], offi
     s.getColumn(4).width = 14;
     dates.forEach((_, i) => (s.getColumn(5 + i).width = 4.5));
     s.addRow([]);
-    s.addRow(['P present, ½ half day, A absent, SL/PL/UL/OL sick/planned/unpaid/other leave, H holiday, WO weekly off, ? no record, - not employed.']);
+    s.addRow(['P present, ½ half day, A absent, SL/PL/UL/OL sick/planned/unpaid/other leave, H holiday, WO weekly off, ? no record, - not employed, · no attendance system (New York: emails only).']);
   }
 
   if (part === 'all') {
@@ -108,6 +108,7 @@ function cellCode(d: DayRecord | undefined): string {
     case 'NR': return '?';
     case 'NE': return '-';
     case 'F': return '';
+    case 'NT': return '·';
     case 'LV': return ({ 'Sick leave': 'SL', 'Planned leave': 'PL', 'Unpaid leave': 'UL' } as Record<string, string>)[d.leaveType ?? ''] ?? 'OL';
     default: return d.code;
   }

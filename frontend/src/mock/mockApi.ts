@@ -78,6 +78,9 @@ export const mockApi: AttendanceApi = {
     changed();
     return wait(undefined);
   },
+  async saveOffices() {
+    return wait(undefined);
+  },
   async saveShifts(shifts) {
     for (const s of shifts) {
       const old = state.shifts.find((x) => x.code === s.code);

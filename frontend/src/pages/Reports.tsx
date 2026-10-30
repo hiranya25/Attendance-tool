@@ -15,7 +15,7 @@ interface Pattern { id: string; lates: number; unexplained: number; punches: num
 function patterns(issues: Issue[]) {
   const by: Record<string, { lates: number; unexplained: number; punches: number }> = {};
   for (const x of issues) {
-    if (x.state === 'explained' || x.state === 'system' || x.state === 'fixed') continue;
+    if (x.state === 'explained' || x.state === 'system' || x.state === 'fixed' || x.state === 'allowed') continue;
     const p = (by[x.employeeId] ??= { lates: 0, unexplained: 0, punches: 0 });
     if (x.type === 'Late arrival') p.lates++;
     if (isUnexplained(x)) p.unexplained++;
@@ -23,7 +23,7 @@ function patterns(issues: Issue[]) {
   }
   return by;
 }
-const isPattern = (p: { lates: number; unexplained: number; punches: number }) => p.lates >= 3 || p.unexplained >= 2 || p.punches >= 2;
+const isPattern = (p: { lates: number; unexplained: number; punches: number }) => p.lates >= 1 || p.unexplained >= 2 || p.punches >= 2;
 
 export function Reports() {
   const { data, ref, trend, emp, office, toast, open } = useApp();
@@ -82,7 +82,7 @@ export function Reports() {
         <Stat label="Present rate" value={pct(cur?.presentRate ?? 0)} sub={delta(cur?.presentRate ?? 0, last?.presentRate, '%')} />
         <Stat label="Items found" value={cur?.issues ?? 0} sub={delta(cur?.issues ?? 0, last?.issues)} />
         <Stat label="Unexplained absences" value={cur?.unexplained ?? 0} sub={delta(cur?.unexplained ?? 0, last?.unexplained)} />
-        <Stat label="Late arrivals" value={cur?.lates ?? 0} sub={delta(cur?.lates ?? 0, last?.lates)} />
+        <Stat label="Late marks" value={cur?.lates ?? 0} sub={delta(cur?.lates ?? 0, last?.lates)} />
       </div>
 
       <Panel title="Summary for management" note="Written from the numbers on this page. This text goes into the emailed package.">
@@ -98,16 +98,16 @@ export function Reports() {
         </Panel>
       </div>
 
-      <Panel title="Repeat patterns" note="3 or more late arrivals, 2 or more unexplained absences, or 2 or more missing punches in the month. Explained and system items are not counted." flush>
+      <Panel title="Repeat patterns" note="Any late mark beyond the office's monthly allowance, 2 or more unexplained absences, or 2 or more missing punches in the month. Explained and system items are not counted." flush>
         {rows.length ? (
           <div className="scroll">
             <table>
-              <thead><tr><th>Person</th><th className="num">Late arrivals</th><th className="num">Unexplained absences</th><th className="num">Missing punches</th><th>Also last month</th></tr></thead>
+              <thead><tr><th>Person</th><th className="num">Late marks beyond allowance</th><th className="num">Unexplained absences</th><th className="num">Missing punches</th><th>Also last month</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="click" onClick={() => open({ kind: 'person', employeeId: r.id })}>
                     <td><b>{emp(r.id).name}</b> <span className="muted small">{office(emp(r.id).officeId).name}</span></td>
-                    <td className={`num${r.lates >= 3 ? ' hot' : ''}`}>{r.lates}</td>
+                    <td className={`num${r.lates >= 1 ? ' hot' : ''}`}>{r.lates}</td>
                     <td className={`num${r.unexplained >= 2 ? ' hot' : ''}`}>{r.unexplained}</td>
                     <td className={`num${r.punches >= 2 ? ' hot' : ''}`}>{r.punches}</td>
                     <td>{r.lastMonth === 'Yes' ? <Pill tone="warn">Yes</Pill> : <span className="muted">No</span>}</td>

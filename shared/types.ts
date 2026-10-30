@@ -12,6 +12,16 @@ export interface Office {
   source: string;
   /** Department names in the punch export that belong to this office. Empty when not connected yet. */
   departments: string[];
+  /** How attendance arrives: the punch export, a daily sheet (OK / L1 / A), or HR emails only. */
+  mode?: 'punch' | 'sheet' | 'emails';
+  /** Days the office is closed, 0 Sunday ... 6 Saturday. */
+  weeklyOff?: number[];
+  /** Minutes after shift start before someone counts as late. */
+  graceMinutes?: number;
+  /** Late marks allowed per month before they count against the person. */
+  lateAllowance?: number;
+  /** What the policy says happens after the allowance, shown on each late beyond it. */
+  lateBeyondNote?: string;
 }
 
 /** A shift code from the punch system, with its scheduled times. */
@@ -42,6 +52,14 @@ export interface Employee {
   calendarId: string;
   /** Nicknames used in emails, e.g. "Jolly". */
   aliases: string;
+  manager?: string;
+  role?: string;
+  /** Where they work, from the team list (for example "MUMBAI/DUBAI"). */
+  location?: string;
+  /** From the team list: "Full Time", "Day Time", "Part Time" or "NA". */
+  workHours?: string;
+  /** False for people not tracked by the attendance tool ("NA" on the team list). */
+  tracked?: boolean;
 }
 
 export interface Holiday {
@@ -53,9 +71,10 @@ export interface Holiday {
 /**
  * Day status codes.
  * P present, HD half day, A absent, LV leave, HL holiday, WO weekly off,
- * NR no record received, NE not employed that day (before joining or after leaving), F not yet in the data.
+ * NR no record received, NE not employed that day (before joining or after leaving), F not yet in the data,
+ * NT no attendance system for this office (tracked through HR emails only).
  */
-export type DayCode = 'P' | 'HD' | 'A' | 'LV' | 'HL' | 'WO' | 'NR' | 'NE' | 'F';
+export type DayCode = 'P' | 'HD' | 'A' | 'LV' | 'HL' | 'WO' | 'NR' | 'NE' | 'F' | 'NT';
 
 export type LeaveType = 'Sick leave' | 'Planned leave' | 'Unpaid leave' | 'Other leave';
 
@@ -87,7 +106,8 @@ export type IssueState =
   | 'explained' // an email on file covers it and was applied
   | 'unclear' // an email arrived but could not be matched with confidence
   | 'fixed' // corrected data arrived later
-  | 'system'; // many people hit the same problem at once, likely a device or sync fault
+  | 'system' // many people hit the same problem at once, likely a device or sync fault
+  | 'allowed'; // a late mark within the office's monthly allowance
 
 export type IssueType =
   | 'Unexplained absence'
@@ -145,7 +165,8 @@ export type ChangeSource =
   | 'Settings'
   | 'People page'
   | 'Attendance file'
-  | 'Attendance file (email)';
+  | 'Attendance file (email)'
+  | 'Team list';
 
 export interface ChangeEntry {
   id: string;
@@ -251,6 +272,8 @@ export interface User {
 
 export interface ImportRecord {
   id: number;
+  /** "punch" for the punch export, "sheet-mumbai" for a hand-kept office sheet. */
+  scope?: string;
   month: string;
   fileName: string;
   source: 'upload' | 'email';

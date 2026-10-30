@@ -223,6 +223,7 @@ td.change s, .tl s { color: var(--muted); }
 .c-WO { background: var(--surface-2); color: var(--muted); }
 .c-NR { background: repeating-linear-gradient(45deg, var(--warn-bg) 0 4px, var(--surface) 4px 8px); color: var(--warn); font-weight: 700; }
 .c-NE { background: repeating-linear-gradient(135deg, var(--surface-2) 0 2px, transparent 2px 6px); color: var(--muted); }
+.c-NT { background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
 .c-F { background: transparent; color: var(--line); cursor: default; box-shadow: inset 0 0 0 1px var(--surface-2); }
 .cell .flag { position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--surface); }
 .cell .fixed { position: absolute; bottom: 1px; left: 3px; right: 3px; height: 2px; border-radius: 1px; background: var(--accent); }
@@ -334,3 +335,4 @@ td input[type='text'] { width: 100%; min-width: 120px; }
 .inline-form { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; padding-top: 4px; }
 .btn.bad { color: var(--bad); border-color: var(--bad); }
 .mail-frame { width: 100%; min-height: 420px; border: 1px solid var(--line); border-radius: var(--r); background: #ffffff; }
+input.num-small { width: 80px; }

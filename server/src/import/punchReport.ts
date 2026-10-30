@@ -8,8 +8,7 @@
 //   01/09/2026 | Tue | G | 09:39 | 18:28 | 09:13 | 00:13 | 00:00 | P | OT
 //   ...
 //   Total Hours ... / Total Pre. : 21 ...
-import ExcelJS from 'exceljs';
-import { readXls } from './xls.ts';
+import { readSheetRows } from './spreadsheet.ts';
 
 export interface RawDay {
   emp_code: string;
@@ -33,10 +32,14 @@ export interface PunchReport {
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
 export async function readPunchReport(buf: Buffer, fileName: string): Promise<PunchReport> {
-  const isXlsx = buf.subarray(0, 2).toString('latin1') === 'PK';
-  const rows = isXlsx ? await readXlsx(buf) : readXls(buf);
+  const rows = await readSheetRows(buf);
   if (!rows.length) throw new Error(`${fileName} is empty.`);
   return parseRows(rows);
+}
+
+/** True when the rows look like the punch system's export. */
+export function isPunchReport(rows: string[][]): boolean {
+  return rows.some((r) => String(r[0] ?? '').trim() === 'Empcode');
 }
 
 export function parseRows(rows: string[][]): PunchReport {
@@ -102,31 +105,4 @@ function parseDate(s: string): string | null {
 function parseTime(s: string | undefined): number | null {
   const m = /^(\d{1,3}):(\d{2})$/.exec(s ?? '');
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-}
-
-/** .xlsx via exceljs, with real dates and times turned back into the export's text form. */
-async function readXlsx(buf: Buffer): Promise<string[][]> {
-  const book = new ExcelJS.Workbook();
-  await book.xlsx.load(buf as unknown as ArrayBuffer);
-  const sheet = book.worksheets[0];
-  if (!sheet) return [];
-  const rows: string[][] = [];
-  sheet.eachRow({ includeEmpty: true }, (row, n) => {
-    const cells: string[] = [];
-    row.eachCell({ includeEmpty: true }, (cell, c) => {
-      const v = cell.value;
-      let text: string;
-      if (v instanceof Date) {
-        const p = (x: number) => String(x).padStart(2, '0');
-        text = v.getUTCFullYear() < 1901
-          ? `${p(v.getUTCHours())}:${p(v.getUTCMinutes())}`
-          : `${p(v.getUTCDate())}/${p(v.getUTCMonth() + 1)}/${v.getUTCFullYear()}`;
-      } else {
-        text = cell.text ?? '';
-      }
-      cells[c - 1] = text;
-    });
-    rows[n - 1] = Array.from(cells, (x) => x ?? '');
-  });
-  return Array.from(rows, (r) => r ?? []);
 }

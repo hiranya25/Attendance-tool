@@ -147,7 +147,7 @@ Open **http://localhost:5173**.
 ### 6. Try it out
 
 1. **Create the first admin account.** It is only stored on your computer. Passwords need at least 8 characters, including a number.
-2. Go to **Attendance files** and upload the punch system's "Month Date Wise Performance" `.xls` file, for example the September 2026 one.
+2. Go to **Attendance files** and upload the team list (.ods), the punch system's "Month Date Wise Performance" `.xls` file, and the Mumbai sheet (.xlsx), in any order.
 3. Look through **Overview**, **Attendance** (click any day), **Issues** and **People**.
 4. On **People**, click a person, then **Edit details**. Add an email or a leaving date, and watch their issues change.
 5. On **Rules & calendars**, change a shift time or the late grace period and save. Every month is checked again straight away, and the change appears in **Change log**.

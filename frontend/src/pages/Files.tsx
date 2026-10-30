@@ -24,7 +24,13 @@ export function Files() {
     setResult(null);
     try {
       const r = await api.uploadImport(file);
-      setResult({ ok: true, text: `Imported ${r.months.map(fmtMonth).join(', ')}: ${r.people} people, ${r.days} days.${r.newPeople.length ? ` ${r.newPeople.length} new people were added to the People page.` : ''} Everything has been checked again.` });
+      if (r.kind === 'team' && r.team) {
+        const t = r.team;
+        setResult({ ok: true, text: `Team list read: ${t.updated.length} people matched and updated, ${t.added.length} added, ${t.notTracked.length} not tracked (NA).${t.notOnList.length ? ` Not on the team list: ${t.notOnList.join(', ')}.` : ''} Check the People page.` });
+      } else {
+        const what = r.kind === 'sheet' ? 'Mumbai attendance sheet' : 'punch export';
+        setResult({ ok: true, text: `Imported the ${what} for ${r.months.map(fmtMonth).join(', ')}: ${r.people} people, ${r.days} days.${r.newPeople.length ? ` New people added (check them on the People page): ${r.newPeople.join(', ')}.` : ''} Everything has been checked again.` });
+      }
       toast('File imported');
       await refresh();
       if (r.months[0]) setMonth(r.months[r.months.length - 1]);
@@ -52,9 +58,9 @@ export function Files() {
             onDragLeave={() => setDrag(false)}
             onDrop={(e) => { e.preventDefault(); setDrag(false); void upload(e.dataTransfer.files[0]); }}
           >
-            <b>{busy ? 'Importing and checking…' : 'Choose the .xls file, or drop it here'}</b>
-            <span className="muted small">For example monthdatewiseperformance29102026.xls</span>
-            <input id="file-input" ref={input} type="file" accept=".xls,.xlsx" disabled={busy} onChange={(e) => void upload(e.target.files?.[0])} />
+            <b>{busy ? 'Importing and checking…' : 'Choose a file, or drop it here'}</b>
+            <span className="muted small">The punch export (monthdatewiseperformance….xls), the Mumbai attendance sheet, or the team list (.ods / .xlsx). The tool works out which one it is.</span>
+            <input id="file-input" ref={input} type="file" accept=".xls,.xlsx,.ods" disabled={busy} onChange={(e) => void upload(e.target.files?.[0])} />
           </label>
           {result && <p className={result.ok ? 'note ok' : 'error'} role="status">{result.text}</p>}
           {usingSampleData && <p className="muted small">This is the demo with sample data, so uploads are turned off here.</p>}
@@ -67,11 +73,11 @@ export function Files() {
               <thead><tr><th>Month</th><th>File</th><th>How it arrived</th><th>When</th><th className="num">People</th><th className="num">Days</th></tr></thead>
               <tbody>
                 {list.map((f, i) => {
-                  const current = list.findIndex((x) => x.month === f.month) === i;
+                  const current = list.findIndex((x) => x.month === f.month && (x.scope ?? 'punch') === (f.scope ?? 'punch')) === i;
                   return (
                     <tr key={f.id}>
                       <td className="nowrap"><b>{fmtMonth(f.month)}</b> {current ? <Pill tone="ok">In use</Pill> : <Pill tone="mute">Replaced</Pill>}</td>
-                      <td className="mono small wide">{f.fileName}</td>
+                      <td className="mono small wide">{f.fileName}<span className="sub">{(f.scope ?? 'punch') === 'punch' ? 'Punch export' : 'Mumbai sheet'}</span></td>
                       <td className="nowrap">{f.source === 'email' ? 'Email' : 'Upload'} <span className="muted small">{f.importedBy}</span></td>
                       <td className="nowrap mono small">{fmtWhen(f.importedAt)}</td>
                       <td className="num">{f.people}</td>

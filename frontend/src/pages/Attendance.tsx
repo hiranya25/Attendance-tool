@@ -8,8 +8,8 @@ import { api } from '../api';
 import { dailyRows, masterRows } from '../lib/reports';
 import type { DayCode, DayRecord } from '../types';
 
-const SHORT: Record<DayCode, string> = { P: 'P', HD: '½', A: 'A', LV: 'L', HL: 'H', WO: '', NR: '?', NE: '', F: '' };
-const LEGEND: DayCode[] = ['P', 'HD', 'A', 'LV', 'HL', 'WO', 'NR', 'NE'];
+const SHORT: Record<DayCode, string> = { P: 'P', HD: '½', A: 'A', LV: 'L', HL: 'H', WO: '', NR: '?', NE: '', F: '', NT: '·' };
+const LEGEND: DayCode[] = ['P', 'HD', 'A', 'LV', 'HL', 'WO', 'NR', 'NE', 'NT'];
 
 export function Attendance() {
   const { data, ref, emp, office, open, toast } = useApp();

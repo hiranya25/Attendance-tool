@@ -4,7 +4,7 @@ import { resetDemo } from '../mock/mockApi';
 import { useApp } from '../store';
 import { Empty, PageHead, Panel, Pill } from '../components/ui';
 import { fmtDay, fmtWhen, hm, parseHm } from '../lib/format';
-import type { Connections, Holiday, Settings, Shift, User } from '../types';
+import type { Connections, Holiday, Office, Settings, Shift, User } from '../types';
 import { PASSWORD_RULE, passwordProblem } from '../lib/password';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -50,24 +50,16 @@ export function Rules() {
       <fieldset className="rules" disabled={!isAdmin}>
         <div className="rules-inner">
         <ConnectionsPanel />
+        <OfficesPanel />
         <ShiftsPanel />
 
         <div className="two">
-          <Panel title="Daily checks" note="What counts as late, early, short, a long absence or a likely system issue.">
+          <Panel title="Daily checks" note="What counts as early, short, a long absence or a likely system issue. Late grace, late allowance and weekly offs are set per office above.">
             <div className="form">
-              <Num id="grace" label="Late after" unit="min past shift start" value={s.graceMinutes} onChange={(v) => set('graceMinutes', v)} />
               <Num id="early" label="Early departure when leaving more than" unit="min before shift end" value={s.earlyToleranceMinutes} onChange={(v) => set('earlyToleranceMinutes', v)} />
               <Num id="short" label="Short hours when below scheduled by more than" unit="min" value={s.shortHoursToleranceMinutes} onChange={(v) => set('shortHoursToleranceMinutes', v)} />
               <Num id="long" label="Long absence from" unit="working days in a row" value={s.longAbsenceDays} min={2} onChange={(v) => set('longAbsenceDays', v)} />
               <Num id="sys" label="Likely system issue when the same gap hits" unit="people in one office, one day" value={s.systemIssueMinPeople} min={2} onChange={(v) => set('systemIssueMinPeople', v)} />
-              <Field label="Weekly off">
-                <div className="chips">
-                  {DAYS.map((d, i) => (
-                    <button key={d} type="button" className={`chip${s.weeklyOff.includes(i) ? ' on' : ''}`} aria-pressed={s.weeklyOff.includes(i)}
-                      onClick={() => set('weeklyOff', s.weeklyOff.includes(i) ? s.weeklyOff.filter((x) => x !== i) : [...s.weeklyOff, i].sort())}>{d}</button>
-                  ))}
-                </div>
-              </Field>
             </div>
           </Panel>
 
@@ -162,6 +154,67 @@ function ConnectionsPanel() {
         </ul>
       ) : <Empty>Connection status is not available.</Empty>}
       {(lines ?? c?.lastRunLog)?.length ? <pre className="log">{(lines ?? c?.lastRunLog ?? []).join('\n')}</pre> : null}
+    </Panel>
+  );
+}
+
+const MODE_LABEL = { punch: 'Punch system export', sheet: 'Monthly sheet (OK / L1 / A)', emails: 'HR emails only' } as const;
+
+/** Each office's own rules: weekly off days, late grace, and late marks allowed per month. */
+function OfficesPanel() {
+  const { ref, reload, toast } = useApp();
+  const [rows, setRows] = useState<Office[]>(ref.offices);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => setRows(ref.offices), [ref.offices]);
+  const dirty = JSON.stringify(rows) !== JSON.stringify(ref.offices);
+  const edit = (i: number, patch: Partial<Office>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  async function save() {
+    setBusy(true);
+    setError('');
+    try {
+      await api.saveOffices(rows);
+      await reload();
+      toast('Office rules saved. Every month was checked again.');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Panel
+      title="Offices"
+      note="Each office's attendance source and rules. Late marks up to the allowance are shown as “Within allowance”; each one after that is flagged."
+      actions={<button className="btn sm pri" type="button" disabled={!dirty || busy} onClick={save}>{busy ? 'Saving…' : 'Save office rules'}</button>}
+      flush
+    >
+      {error && <p className="error inset" role="alert">{error}</p>}
+      <div className="scroll">
+        <table>
+          <thead><tr><th>Office</th><th>Attendance from</th><th>Weekly off</th><th>Late grace (min)</th><th>Late marks allowed / month</th><th>After the allowance</th></tr></thead>
+          <tbody>
+            {rows.map((o, i) => (
+              <tr key={o.id}>
+                <td className="nowrap"><b>{o.name}</b> <span className="muted small">{o.tzLabel}</span></td>
+                <td className="small">{MODE_LABEL[o.mode ?? 'punch']}</td>
+                <td>
+                  <div className="chips" role="group" aria-label={`${o.name} weekly off`}>
+                    {DAYS.map((d, n) => {
+                      const on = (o.weeklyOff ?? []).includes(n);
+                      return <button key={d} type="button" className={`chip${on ? ' on' : ''}`} aria-pressed={on}
+                        onClick={() => edit(i, { weeklyOff: on ? (o.weeklyOff ?? []).filter((x) => x !== n) : [...(o.weeklyOff ?? []), n].sort() })}>{d}</button>;
+                    })}
+                  </div>
+                </td>
+                <td><input id={`og-${o.id}`} type="number" min={0} max={240} aria-label={`${o.name} late grace`} value={o.graceMinutes ?? 15} onChange={(e) => e.target.value !== '' && edit(i, { graceMinutes: Number(e.target.value) })} className="num-small" /></td>
+                <td><input id={`oa-${o.id}`} type="number" min={0} max={31} aria-label={`${o.name} late marks allowed`} value={o.lateAllowance ?? 0} onChange={(e) => e.target.value !== '' && edit(i, { lateAllowance: Number(e.target.value) })} className="num-small" /></td>
+                <td><input id={`on-${o.id}`} type="text" aria-label={`${o.name} rule after the allowance`} value={o.lateBeyondNote ?? ''} onChange={(e) => edit(i, { lateBeyondNote: e.target.value })} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

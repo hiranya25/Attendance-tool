@@ -14,7 +14,7 @@ import * as D from './dates.ts';
 
 export const LEAVE: Record<string, LeaveType> = { sick_leave: 'Sick leave', planned_leave: 'Planned leave', unpaid_leave: 'Unpaid leave', other_leave: 'Other leave' };
 export const NOTIFY_TYPES: IssueType[] = ['Missing punch-in', 'Missing punch-out', 'Unexplained absence'];
-const CODE_LABEL: Record<DayCode, string> = { P: 'Present', HD: 'Half day', A: 'Absent', LV: 'Leave', HL: 'Holiday', WO: 'Weekly off', NR: 'No record', NE: 'Not employed', F: 'Upcoming' };
+const CODE_LABEL: Record<DayCode, string> = { P: 'Present', HD: 'Half day', A: 'Absent', LV: 'Leave', HL: 'Holiday', WO: 'Weekly off', NR: 'No record', NE: 'Not employed', F: 'Upcoming', NT: 'No attendance system' };
 
 export const codeLabel = (c: DayCode) => CODE_LABEL[c] ?? c;
 export const issueKey = (emp: string, date: string, type: string) => `${emp}|${date}|${type}`;
@@ -65,35 +65,60 @@ class Builder {
   async run(): Promise<MonthData> {
     const { month, r } = this;
     const dates = D.monthDates(month);
-    const imp = await R.latestImport(month);
-    const raw = imp ? await R.rawDays(imp.id) : [];
-    this.foundAt = imp?.imported_at ?? now();
-    // A month-to-date export can list the rest of the month as blank or absent, and today is not over yet.
+    const imports = await R.latestImports(month);
+    const imp = imports[0];
+    // A month-to-date file can list the rest of the month as blank or absent, and today is not over yet.
     // Only days up to yesterday count; later rows are kept in the database but treated as "not yet".
+    // Each file (the punch export, the Mumbai sheet) covers its own dates.
     const lastFullDay = D.addDays(today(), -1);
-    const lastInFile = raw.length ? raw.reduce((m, x) => (x.date > m ? x.date : m), raw[0].date) : null;
-    const dataThrough = lastInFile && lastInFile > lastFullDay ? lastFullDay : lastInFile;
-    const partial = dates[dates.length - 1] > (dataThrough ?? '');
+    const raw: R.RawRow[] = [];
+    const throughOf: Record<string, string> = {};
+    for (const i of imports) {
+      const rows = await R.rawDays(i.id);
+      const last = rows.reduce((m, x) => (x.date > m ? x.date : m), '');
+      const through = last > lastFullDay ? lastFullDay : last;
+      for (const row of rows) { raw.push(row); throughOf[row.emp_code] = through; }
+    }
+    this.foundAt = imports.reduce((m, i) => (i.imported_at > m ? i.imported_at : m), '') || now();
+    const monthEnd = dates[dates.length - 1];
+    const emailsOnly = Object.values(this.offices).filter((o) => o.mode === 'emails').map((o) => o.id);
+    const emailsThrough = month <= today().slice(0, 7) ? (monthEnd < lastFullDay ? monthEnd : lastFullDay) : '';
+    const throughs = [...Object.values(throughOf), ...(emailsOnly.length && emailsThrough >= dates[0] ? [emailsThrough] : [])];
+    const dataThrough = throughs.length ? throughs.reduce((m, x) => (x > m ? x : m)) : null;
+    const partial = monthEnd > (dataThrough ?? '');
 
     const byEmp: Record<string, Record<string, R.RawRow>> = {};
     for (const row of raw) (byEmp[row.emp_code] ??= {})[row.date] = row;
+    // Offices with no attendance system (New York): days come from the calendar and HR emails only.
+    if (emailsThrough >= dates[0]) {
+      for (const e of Object.values(this.emps)) {
+        if (!emailsOnly.includes(e.officeId) || e.tracked === false || byEmp[e.id]) continue;
+        byEmp[e.id] = {};
+        throughOf[e.id] = emailsThrough;
+      }
+    }
 
     // 1. Day records from the raw data, with the employee list and holiday calendars applied.
     const records: Record<string, Record<string, DayRecord>> = {};
     const holidayHits: Record<string, number> = {};
     for (const [code, days] of Object.entries(byEmp)) {
       const e = this.emps[code];
-      if (!e) continue;
+      if (!e || e.tracked === false) continue;
       const cal = this.hol[e.calendarId] ?? {};
+      const weeklyOff = this.weeklyOff(e.officeId);
+      const through = throughOf[code] ?? '';
+      const noSystem = emailsOnly.includes(e.officeId);
       let notEmployed = 0;
       records[code] = {};
       for (const date of dates) {
-        const row = dataThrough && date > dataThrough ? undefined : days[date];
+        const row = date > through ? undefined : days[date];
         if (!row) {
           // No row for this day: only a working day counts as a missing record.
-          const pastDay = !!dataThrough && date <= dataThrough;
-          const offDay = this.r.weeklyOff.includes(D.dow(date)) ? 'WO' : cal[date] ? 'HL' : null;
-          records[code][date] = { employeeId: code, date, code: !pastDay ? 'F' : offDay ?? 'NR', ...(pastDay && offDay === 'HL' ? { note: cal[date] } : {}) };
+          const pastDay = date <= through;
+          const employed = !(e.joinDate && date < e.joinDate) && !(e.exitDate && date > e.exitDate);
+          const offDay = weeklyOff.includes(D.dow(date)) ? 'WO' : cal[date] ? 'HL' : null;
+          const code_: DayCode = !pastDay ? 'F' : !employed ? 'NE' : offDay ?? (noSystem ? 'NT' : 'NR');
+          records[code][date] = { employeeId: code, date, code: code_, ...(code_ === 'HL' ? { note: cal[date] } : {}) };
           continue;
         }
         const dev = deviceCode(row.status);
@@ -122,6 +147,8 @@ class Builder {
             rec.note = `Worked on a holiday (${cal[date]})`;
           }
           if (rec.code === 'HL') rec.note = cal[date];
+        } else if ((dev === 'P' || dev === 'HD') && weeklyOff.includes(D.dow(date))) {
+          rec.note = 'Worked on a weekly off (paid extra)';
         }
         records[code][date] = rec;
       }
@@ -173,7 +200,7 @@ class Builder {
         let changed = 0;
         for (const d of mDates) {
           const rec = records[emp.id]?.[d];
-          if (!rec || !['A', 'HD', 'NR'].includes(rec.code)) continue;
+          if (!rec || !['A', 'HD', 'NR', 'NT'].includes(rec.code)) continue;
           const from = rec.code;
           rec.original ??= { code: from };
           rec.leaveType = leave;
@@ -199,10 +226,27 @@ class Builder {
         if (rec.code === 'A') { run.push(date); continue; }
         if (rec.code !== 'WO' && rec.code !== 'HL') { this.absenceRun(code, run, explains); run = []; }
         if (rec.code === 'NR') this.issue(code, date, 'Missing record', 'medium', 'No row arrived from the punch system for this day. This is different from an absence.', explains);
+        if (emailsOnly.includes(e.officeId)) {
+          // No attendance system: a late arrival is known only from an email, and it still counts as a late mark.
+          for (const ex of explains[`${code}|${date}`] ?? []) {
+            if (ex.covers !== 'late' || !ex.applied) continue;
+            this.issue(code, date, 'Late arrival', 'low', `Late arrival reported by email "${ex.subject}".`, {});
+            const x = this.issues[this.issues.length - 1];
+            x.emailId = ex.emailId;
+            x.timeline.push({ at: ex.at, text: `Read from email "${ex.subject}"` });
+          }
+          continue;
+        }
         if (rec.code === 'HL' && !this.hol[e.calendarId]?.[date] && rec.device?.status === 'HL') {
           this.issue(code, date, 'Holiday not on calendar', 'low', `The punch system marked a holiday that is not on the ${this.calNames[e.calendarId] ?? "person's"} calendar. If it is a real holiday, add it on the Rules page.`, explains);
         }
         if (rec.code !== 'P' && rec.code !== 'HD') continue;
+        if (rec.shift === 'SHEET') {
+          // A hand-kept sheet has no punch times; its own late marks (L1, L2, ...) are taken as they are.
+          const mark = /^LT \((.+)\)$/.exec(rec.device?.remark ?? '')?.[1];
+          if (mark) this.issue(code, date, 'Late arrival', 'low', `Marked late (${mark}) on the ${this.offices[e.officeId]?.name ?? ''} attendance sheet.`, explains);
+          continue;
+        }
         const inT = rec.login ?? null;
         const outT = rec.logout ?? null;
         const devNote = rec.device?.remark ? ` Punch system note: ${rec.device.remark}.` : '';
@@ -213,8 +257,9 @@ class Builder {
         const s = rec.scheduledStart;
         const end = rec.scheduledEnd;
         const late = D.diff(s, inT);
-        if (late > r.graceMinutes && late < 240) {
-          this.issue(code, date, 'Late arrival', late > 60 ? 'medium' : 'low', `In at ${D.hm(inT)}, shift ${rec.shift} starts ${D.hm(s)}. ${late} min late (grace is ${r.graceMinutes} min).${devNote}`, explains);
+        const grace = this.offices[e.officeId]?.graceMinutes ?? r.graceMinutes;
+        if (late > grace && late < 240) {
+          this.issue(code, date, 'Late arrival', late > 60 ? 'medium' : 'low', `In at ${D.hm(inT)}, shift ${rec.shift} starts ${D.hm(s)}. ${late} min late (grace is ${grace} min).${devNote}`, explains);
         }
         const earlyBy = outT == null ? 0 : D.diff(outT, end);
         const early = outT != null && earlyBy > r.earlyToleranceMinutes && earlyBy < 600;
@@ -229,6 +274,9 @@ class Builder {
       }
       this.absenceRun(code, run, explains);
     }
+
+    // Late allowance: each office allows a number of late marks a month. Every late arrival counts, in date order.
+    this.applyLateAllowance();
 
     // 4. The same gap for many people in one office on one day points to a device problem.
     const groups: Record<string, IssueWithKey[]> = {};
@@ -257,7 +305,7 @@ class Builder {
       if (x.state === 'open') x.state = 'reminded';
       x.timeline.push({ at: n.at, text: Number(n.sent) ? `Reminder emailed to ${n.to_addr}` : `Reminder prepared for ${n.to_addr}, not sent` });
     }
-    if (imp) await this.lateData(imp, records);
+    for (const i of imports) await this.lateData(i, records);
 
     // Settings, People-page and file changes that touch this month.
     for (const a of await k('audit').orderBy('id')) {
@@ -275,7 +323,7 @@ class Builder {
     return {
       month, dataThrough: dataThrough ?? dates[0], hasData: raw.length > 0, partial: raw.length > 0 && partial, records,
       issues: this.issues.map(({ key: _key, ...x }) => x),
-      emails, changes: this.changes, notifications, sources: this.sources(imp), close: await this.close(imp),
+      emails, changes: this.changes, notifications, sources: this.sources(imports), close: await this.close(imp ? this.foundAt : null),
     };
   }
 
@@ -299,6 +347,32 @@ class Builder {
     this.issues.push(x);
   }
 
+  private applyLateAllowance() {
+    const byEmp = new Map<string, IssueWithKey[]>();
+    for (const x of this.issues) if (x.type === 'Late arrival') (byEmp.get(x.employeeId) ?? byEmp.set(x.employeeId, []).get(x.employeeId)!).push(x);
+    for (const [code, lates] of byEmp) {
+      const office = this.offices[this.emps[code]?.officeId];
+      const allowed = office?.lateAllowance ?? 0;
+      if (!allowed) continue;
+      lates.sort((a, b) => a.date.localeCompare(b.date));
+      lates.forEach((x, i) => {
+        const n = i + 1;
+        if (n <= allowed) {
+          x.detail += ` Late mark ${n} of ${allowed} allowed this month.`;
+          if (x.state === 'open') { x.state = 'allowed'; x.severity = 'low'; }
+        } else {
+          x.detail += ` Late mark ${n}: beyond the ${allowed} allowed this month.${office?.lateBeyondNote ? ` ${office.lateBeyondNote}` : ''}${x.state === 'explained' ? ' It was explained by email, but still counts as a late mark.' : ''}`;
+          x.state = 'open';
+          x.severity = 'medium';
+        }
+      });
+    }
+  }
+
+  private weeklyOff(officeId: string): number[] {
+    return this.offices[officeId]?.weeklyOff ?? this.r.weeklyOff;
+  }
+
   /** Short runs of absence are flagged day by day; long runs become one item, since they are usually leave or a leaver. */
   private absenceRun(code: string, run: string[], explains: Record<string, Explain[]>) {
     if (!run.length) return;
@@ -311,7 +385,7 @@ class Builder {
 
   /** Punches missing in an earlier file for this month that a later file filled in. */
   private async lateData(imp: R.ImportRow, records: Record<string, Record<string, DayRecord>>) {
-    const prev = await R.previousImport(this.month, imp.id);
+    const prev = await R.previousImport(this.month, imp.id, imp.scope || 'punch');
     if (!prev) return;
     for (const old of await R.rawDays(prev.id)) {
       const rec = records[old.emp_code]?.[old.date];
@@ -349,20 +423,25 @@ class Builder {
     }));
   }
 
-  private sources(imp: R.ImportRow | undefined): SourceHealth[] {
+  private sources(imports: R.ImportRow[]): SourceHealth[] {
     return Object.values(this.offices).map((o) => {
-      const connected = o.departments.length > 0;
+      if (o.mode === 'emails') {
+        return { name: `${o.name}: ${o.source}`, officeId: o.id, state: 'ok', ok: true, lastSync: '', note: 'No attendance system. Leave and late arrivals come from emails to HR; holidays and weekly offs from the calendar.' };
+      }
+      const imp = imports.find((i) => (o.mode === 'sheet' ? i.scope === `sheet-${o.id}` : (i.scope || 'punch') === 'punch'));
+      const connected = o.mode === 'sheet' || o.departments.length > 0;
+      const how = o.mode === 'sheet' ? 'the monthly attendance sheet' : 'the punch system export';
       return {
         name: `${o.name}: ${o.source}`, officeId: o.id, state: !connected ? 'off' : imp ? 'ok' : 'warn', ok: connected && !!imp, lastSync: imp?.imported_at ?? '',
-        note: !connected ? 'No attendance source connected for this office yet.' : imp ? `From ${imp.file_name}, imported ${D.when(imp.imported_at)}.` : `No attendance file for this month yet. Upload it, or email it to ${this.r.hrEmail}.`,
+        note: !connected ? 'No attendance source connected for this office yet.' : imp ? `From ${imp.file_name}, imported ${D.when(imp.imported_at)}.` : `No file for this month yet. Upload ${how} on Attendance files.`,
       };
     });
   }
 
-  private async close(imp: R.ImportRow | undefined) {
+  private async close(lastImportAt: string | null) {
     const reports = await (await db())('reports').where({ month: this.month }).orderBy('version', 'desc');
     let closesAt = `${D.nextMonth(this.month)}-${String(this.r.closeDay).padStart(2, '0')}T06:00`;
-    if (imp && imp.imported_at > closesAt) closesAt = imp.imported_at;
+    if (lastImportAt && lastImportAt > closesAt) closesAt = lastImportAt;
     return {
       month: this.month, closed: reports.length > 0,
       closesAt: reports.length ? reports[reports.length - 1].created_at : closesAt,
