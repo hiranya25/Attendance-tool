@@ -148,7 +148,7 @@ function ConnectionsPanel() {
     >
       {c ? (
         <ul className="list">
-          {item(c.microsoft, `Outlook mailbox ${c.mailbox}`, 'Reads new emails and attendance files, and sends reminders and reports.', 'Add the Microsoft 365 app details to config.json on the server. See docs/DEPLOY.md.')}
+          {item(c.microsoft, `Outlook mailbox ${c.mailbox}`, 'Receives a copy of everything sent to the hr@ group. The tool reads it, and sends reminders and reports from it.', 'Add the Microsoft 365 app details to config.json on the server. See docs/DEPLOY.md.')}
           {item(c.ai, `AI email reader: ${c.aiName}`, 'Works out the person, days and type of each email.', 'Add the AI API key to config.json on the server (see docs/DEPLOY.md, step 7).')}
           {item(c.sendEmail, 'Sending email', 'Reminders, HR summaries and monthly reports are sent.', 'Turned off in config.json. Messages are recorded on the Reminders page but not sent.')}
         </ul>

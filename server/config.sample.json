@@ -15,8 +15,9 @@
     "tenantId": "",
     "clientId": "",
     "clientSecret": "",
-    "mailbox": "hr@amipi.com",
-    "sender": "hr@amipi.com"
+    "mailbox": "attendance@amipi.com",
+    "sender": "attendance@amipi.com",
+    "replyTo": "hr@amipi.com"
   },
   "ai": {
     "provider": "nvidia",

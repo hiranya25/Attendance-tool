@@ -2,17 +2,19 @@
 
 Short lists to forward. Everything here is entered on the website or in `config.json`, never sent by email to the tool's developers.
 
-## For the Microsoft 365 admin (about 10 minutes)
+## For the Microsoft 365 admin (about 15 minutes)
 
-> We're setting up Attendance Desk, an internal tool that reads and sends mail from **hr@amipi.com**. Please:
+> We're setting up Attendance Desk, an internal tool that needs to read the emails sent to the **hr@amipi.com** group and send reminders and reports. Because hr@ is a group with no inbox of its own, please:
 >
-> 1. In **portal.azure.com**, open **Microsoft Entra ID → App registrations → New registration**. Name it "Attendance Desk", single tenant.
-> 2. Under **API permissions**, add **Microsoft Graph → Application permissions → Mail.Read** and **Mail.Send**, then **Grant admin consent**.
-> 3. Limit the app to the hr@amipi.com mailbox only (application access policy, or RBAC for Applications in Exchange Online).
-> 4. Under **Certificates & secrets**, create a client secret.
-> 5. Send these three values securely (not by plain email): **Directory (tenant) ID**, **Application (client) ID**, **Client secret value**.
+> 1. **Create a shared mailbox** `attendance@amipi.com` (Microsoft 365 admin center → Teams & groups → Shared mailboxes). No licence is needed.
+> 2. **Add attendance@amipi.com as a member of the hr@amipi.com group**, so it receives a copy of everything sent to hr@.
+> 3. In **portal.azure.com → Microsoft Entra ID → App registrations → New registration**, create "Attendance Desk" (single tenant).
+> 4. Under **API permissions**, add **Microsoft Graph → Application permissions → Mail.Read** and **Mail.Send**, then **Grant admin consent**.
+> 5. Limit the app to the **attendance@amipi.com** mailbox only (application access policy, or RBAC for Applications in Exchange Online).
+> 6. Under **Certificates & secrets**, create a client secret.
+> 7. Send these three values securely (not by plain email): **Directory (tenant) ID**, **Application (client) ID**, **Client secret value**.
 >
-> The tool only reads new messages and sends from hr@. It never deletes or moves anything.
+> The tool only reads the attendance@ mailbox and sends from it. It never reads personal mailboxes, and never deletes or moves anything.
 
 ## For Jainam
 

@@ -102,18 +102,36 @@ Replace `USER` with your cPanel user name, and `20` with the Node.js version you
 
 After the first run, **Rules & calendars → Connections** shows "Last automatic run".
 
-## 6. Connect Outlook (hr@amipi.com)
+## 6. Connect Outlook (the hr@amipi.com group)
 
-The tool reads new emails at hr@amipi.com (leave, sick days, late notes, and attendance files sent as attachments). It also sends reminders, summaries and the monthly report from the same mailbox. A Microsoft 365 admin does this once:
+hr@amipi.com is an email **group**, not a mailbox: mail sent to it is copied to each member and there is no inbox of its own to read. So the tool gets its own **shared mailbox** that is a member of the group. Every email sent to hr@ also lands there, and the tool reads only that mailbox, never anyone's personal mail.
 
+A Microsoft 365 admin does this once:
+
+**A. Create the shared mailbox (free, no licence needed)**
+1. In the **Microsoft 365 admin center**, open **Teams & groups → Shared mailboxes → Add a shared mailbox**.
+2. Name it `Attendance Desk`, with the address `attendance@amipi.com` (any address works; put the same one in `config.json`).
+
+**B. Add it to the hr@ group**
+1. Open **Teams & groups → Active teams & groups**, and find **hr@amipi.com** (it may be under *Distribution list* or *Microsoft 365*).
+2. Under **Members**, add `attendance@amipi.com`.
+3. If the group only accepts mail from people inside the company, nothing else changes. Employees and managers keep writing to hr@ as before.
+
+**C. Register the app that reads and sends from it**
 1. Go to **portal.azure.com**, then **Microsoft Entra ID**, then **App registrations**, then **New registration**.
 2. Name it `Attendance Desk`, choose "Accounts in this organizational directory only", and click **Register**.
 3. On the app's page, copy the **Application (client) ID** and the **Directory (tenant) ID**.
 4. Open **Certificates & secrets**, then **New client secret**. Copy the **Value** straight away; it is shown only once.
 5. Open **API permissions**, then **Add a permission**, then **Microsoft Graph**, then **Application permissions**. Add `Mail.Read` and `Mail.Send`, then click **Grant admin consent**.
-6. **Recommended:** limit the app to the hr@amipi.com mailbox only, so it cannot read anyone else's mail. In Exchange Online this is done with an application access policy, or RBAC for Applications. Your Microsoft 365 admin will know which one your tenant uses.
-7. Put the three values into `config.json` under `microsoft` (`tenantId`, `clientId`, `clientSecret`). Keep `mailbox` and `sender` as `hr@amipi.com`.
-8. Restart the app in **Setup Node.js App**, then click **Run checks now** on the Rules page. The Outlook line should say **Connected**.
+6. **Recommended:** limit the app to the `attendance@amipi.com` mailbox only, so it cannot read anyone else's mail. In Exchange Online this is done with an application access policy, or RBAC for Applications.
+
+**D. Put it in `config.json`**
+- Under `microsoft`, fill in `tenantId`, `clientId` and `clientSecret`.
+- Set `mailbox` and `sender` to `attendance@amipi.com`, and keep `replyTo` as `hr@amipi.com`.
+- Reminders and reports are then sent from attendance@, and replies go to the hr@ group, so HR sees them and the tool reads them too.
+- Restart the app in **Setup Node.js App**, then click **Run checks now** on the Rules page. The Outlook line should say **Connected**.
+
+**Test:** send an email to hr@amipi.com ("I'm on sick leave tomorrow"). Within 15 minutes it should appear on the **HR emails** page.
 
 The tool reads mail from three days before it was connected onwards. It never deletes or moves anything in the mailbox.
 

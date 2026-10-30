@@ -82,7 +82,7 @@ In the `server` folder, create a new file called `config.json` and paste this in
   "database": { "client": "better-sqlite3", "filename": "./storage/local.sqlite" },
   "storageDir": "./storage",
   "sessionSecret": "any-long-random-text-for-local-testing",
-  "microsoft": { "tenantId": "", "clientId": "", "clientSecret": "", "mailbox": "hr@amipi.com", "sender": "hr@amipi.com" },
+  "microsoft": { "tenantId": "", "clientId": "", "clientSecret": "", "mailbox": "attendance@amipi.com", "sender": "attendance@amipi.com", "replyTo": "hr@amipi.com" },
   "ai": { "provider": "nvidia", "apiKey": "", "model": "nvidia/nemotron-3-ultra-550b-a55b", "baseUrl": "https://integrate.api.nvidia.com/v1" },
   "sendEmail": false
 }

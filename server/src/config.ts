@@ -7,7 +7,13 @@ export interface AppConfig {
   database: { client: 'pg' | 'mysql2' | 'better-sqlite3'; host?: string; port?: number; user?: string; password?: string; database?: string; filename?: string };
   storageDir: string;
   sessionSecret: string;
-  microsoft: { tenantId: string; clientId: string; clientSecret: string; mailbox: string; sender: string };
+  /**
+   * mailbox: the shared mailbox the tool reads. hr@amipi.com is a group with no inbox of its own, so a shared mailbox
+   * (for example attendance@amipi.com) is added as a member of the group and receives a copy of everything sent to hr@.
+   * sender: the mailbox the tool sends from (normally the same shared mailbox).
+   * replyTo: where replies to the tool's emails go (the hr@ group, so HR sees them and the tool reads them too).
+   */
+  microsoft: { tenantId: string; clientId: string; clientSecret: string; mailbox: string; sender: string; replyTo: string };
   ai: { provider: 'nvidia' | 'anthropic'; apiKey: string; model: string; baseUrl: string; maxPerRun?: number; pauseSeconds?: number };
   /** Older config files: Claude settings. Used only when "ai" is not set. */
   anthropic?: { apiKey: string; model: string };
@@ -30,7 +36,7 @@ export function config(): AppConfig {
     appUrl: '', timezone: 'Asia/Kolkata', storageDir: './storage', sessionSecret: '', sendEmail: true,
     ...raw,
     database: { client: 'pg', ...raw.database },
-    microsoft: { tenantId: '', clientId: '', clientSecret: '', mailbox: 'hr@amipi.com', sender: 'hr@amipi.com', ...raw.microsoft },
+    microsoft: { tenantId: '', clientId: '', clientSecret: '', mailbox: 'attendance@amipi.com', sender: '', replyTo: 'hr@amipi.com', ...raw.microsoft },
     ai: raw.ai
       ? { ...NVIDIA_DEFAULTS, ...(raw.ai as Partial<AppConfig['ai']>) }
       : raw.anthropic?.apiKey
