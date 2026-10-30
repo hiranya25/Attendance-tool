@@ -364,7 +364,7 @@ function Users() {
       await api.resetPassword(u.id, newPw);
       setResetFor(null);
       setNewPw('');
-      toast(`New password set for ${u.name}. Tell them, and ask them to change it under "My password".`);
+      toast(`New password set for ${u.name}. Tell them, and ask them to change it in Settings.`);
     });
   }
   return (

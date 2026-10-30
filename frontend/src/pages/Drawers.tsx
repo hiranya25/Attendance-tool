@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
-import { PASSWORD_RULE, passwordProblem } from '../lib/password';
 import { useApp, type DrawerTarget } from '../store';
 import { CODE_LABEL, Drawer, Empty, KV, Pill, Sev, StatePill, Timeline } from '../components/ui';
 import { EmailCard } from './Emails';
@@ -22,7 +21,6 @@ export function DrawerHost({ target, onClose }: { target: DrawerTarget; onClose:
   if (target.kind === 'issue') return <IssueDrawer id={target.id} onClose={onClose} />;
   if (target.kind === 'day') return <DayDrawer employeeId={target.employeeId} date={target.date} onClose={onClose} />;
   if (target.kind === 'person') return <PersonDrawer employeeId={target.employeeId} onClose={onClose} />;
-  if (target.kind === 'account') return <AccountDrawer onClose={onClose} />;
   if (target.kind === 'message') return <MessageDrawer id={target.id} onClose={onClose} />;
   return <EmailDrawer id={target.id} onClose={onClose} />;
 }
@@ -251,46 +249,6 @@ function PersonEditor({ employeeId }: { employeeId: string }) {
         <button className="btn sm" type="button" onClick={() => setOpen(false)}>Cancel</button>
       </div>
     </form>
-  );
-}
-
-/** Change your own password. Other devices you are signed in on are signed out. */
-function AccountDrawer({ onClose }: { onClose: () => void }) {
-  const { ref, toast } = useApp();
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [again, setAgain] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    const problem = passwordProblem(next) ?? (next !== again ? 'The two new passwords are not the same.' : null);
-    if (problem) { setError(problem); return; }
-    setBusy(true);
-    try {
-      await api.changePassword(current, next);
-      toast('Password changed');
-      onClose();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Drawer title="My password" sub={ref.user ? `${ref.user.name} · ${ref.user.email}` : undefined} onClose={onClose}>
-      <form className="form" onSubmit={save}>
-        <label className="field" htmlFor="pw-current"><span>Current password</span><input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required /></label>
-        <label className="field" htmlFor="pw-new"><span>New password</span><input id="pw-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={8} aria-describedby="pw-new-rule" />
-          <span id="pw-new-rule" className="muted small">{PASSWORD_RULE}</span>
-        </label>
-        <label className="field" htmlFor="pw-again"><span>New password again</span><input id="pw-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required /></label>
-        {error && <p className="error" role="alert">{error}</p>}
-        <div className="row-gap"><button className="btn pri" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</button></div>
-        <p className="muted small">You stay signed in here. Anywhere else you are signed in will be signed out.</p>
-      </form>
-    </Drawer>
   );
 }
 
