@@ -29,6 +29,7 @@ export function httpApi(base: string): AttendanceApi {
     getReference: () => call('/reference'),
     getMonth: (month) => call(`/months/${month}`),
     getTrend: () => call('/trend'),
+    getHistory: () => call('/history'),
     connections: () => call('/connections'),
     listImports: () => call('/imports'),
     getNotification: (id) => call(`/notifications/${encodeURIComponent(id)}`),

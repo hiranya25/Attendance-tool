@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import express, { type NextFunction, type Request, type Response, Router } from 'express';
-import type { Connections, Employee, Holiday, Office, Reference, Settings, Shift, TrendPoint, User } from '../../../shared/types.ts';
+import type { Connections, Employee, Holiday, MonthSummary, Office, Reference, Settings, Shift, TrendPoint, User } from '../../../shared/types.ts';
 import { config, now, today } from '../config.ts';
 import { db } from '../db.ts';
 import * as R from '../repo.ts';
@@ -8,7 +8,7 @@ import * as D from '../engine/dates.ts';
 import { buildMonth } from '../engine/monthBuilder.ts';
 import { importFile } from '../import/importer.ts';
 import { writeWorkbook, type ExcelPart } from '../reports/excel.ts';
-import { isUnexplained, totals } from '../reports/summary.ts';
+import { isUnexplained, needsAttention, totals } from '../reports/summary.ts';
 import { buildPackage, runAll } from '../jobs.ts';
 import { graphConfigured } from '../mail/graph.ts';
 import { aiConfigured, aiName } from '../ai/emailReader.ts';
@@ -74,6 +74,26 @@ export function apiRouter(): Router {
         unexplained: d.issues.filter(isUnexplained).length,
         lates: d.issues.filter((x) => x.type === 'Late arrival' && x.state !== 'explained').length,
         presentRate: totals(Object.values(d.records).flatMap((r) => Object.values(r))).rate,
+      });
+    }
+    return out;
+  }));
+  api.get('/history', user, h(async (): Promise<MonthSummary[]> => {
+    const k = await db();
+    const months: string[] = (await k('imports').distinct('month')).map((r) => r.month).sort().reverse();
+    const out: MonthSummary[] = [];
+    for (const m of months) {
+      const d = await buildMonth(m);
+      const t = totals(Object.values(d.records).flatMap((r) => Object.values(r)));
+      out.push({
+        month: m, closed: d.close.closed, partial: Boolean(d.partial), dataThrough: d.dataThrough,
+        people: Object.keys(d.records).length, presentRate: t.rate, leaveDays: t.leave,
+        issues: d.issues.filter((x) => x.state !== 'system').length,
+        needAttention: d.issues.filter(needsAttention).length,
+        unexplained: d.issues.filter(isUnexplained).length,
+        latesBeyond: d.issues.filter((x) => x.type === 'Late arrival' && x.state === 'open').length,
+        files: (await R.latestImports(m)).map((i) => ({ fileName: i.file_name, scope: i.scope || 'punch', importedAt: i.imported_at })),
+        reports: d.close.reports ?? [],
       });
     }
     return out;

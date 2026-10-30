@@ -52,6 +52,18 @@ export const mockApi: AttendanceApi = {
       presentRate: totals(Object.values(d.records).flatMap((r) => Object.values(r))).rate,
     };
   })),
+  getHistory: () => wait([...MONTHS].reverse().map((m) => {
+    const d = month(m);
+    const t = totals(Object.values(d.records).flatMap((r) => Object.values(r)));
+    return {
+      month: m, closed: d.close.closed, partial: !d.close.closed, dataThrough: d.dataThrough, people: Object.keys(d.records).length,
+      presentRate: t.rate, leaveDays: t.leave, issues: d.issues.filter((x) => x.state !== 'system').length,
+      needAttention: d.issues.filter((x) => ['open', 'reminded', 'unclear'].includes(x.state)).length,
+      unexplained: d.issues.filter(isUnexplained).length, latesBeyond: d.issues.filter((x) => x.type === 'Late arrival' && x.state === 'open').length,
+      files: [{ fileName: `monthdatewiseperformance-${m}.xls`, scope: 'punch', importedAt: `${m}-28T10:00` }],
+      reports: d.close.closed ? [{ id: 0, version: 1, createdAt: d.close.closesAt, note: 'Month closed', sentTo: d.close.reportsSentTo }] : [],
+    };
+  })),
   connections: () => wait({ microsoft: false, ai: false, aiName: 'NVIDIA nvidia/nemotron-3-ultra-550b-a55b', sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
   getNotification: async (id) => {
     const n = Object.values(cache).flatMap((m) => m.notifications).find((x) => x.id === id);

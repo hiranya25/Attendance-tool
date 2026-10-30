@@ -235,6 +235,23 @@ export interface MonthData {
   close: MonthClose;
 }
 
+/** One line per month on the Past months page. */
+export interface MonthSummary {
+  month: string;
+  closed: boolean;
+  partial: boolean;
+  dataThrough: string;
+  people: number;
+  presentRate: number;
+  issues: number;
+  needAttention: number;
+  unexplained: number;
+  latesBeyond: number;
+  leaveDays: number;
+  files: { fileName: string; scope: string; importedAt: string }[];
+  reports: ReportFile[];
+}
+
 export interface TrendPoint {
   month: string;
   issues: number;

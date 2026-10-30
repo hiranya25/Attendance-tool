@@ -15,6 +15,7 @@ import { People } from './pages/People';
 import { Rules } from './pages/Rules';
 import { DrawerHost } from './pages/Drawers';
 import { Files } from './pages/Files';
+import { History } from './pages/History';
 import { Login } from './pages/Login';
 
 const VIEWS = [
@@ -26,6 +27,7 @@ const VIEWS = [
   { id: 'changes', label: 'Change log', page: Changes },
   { id: 'reminders', label: 'Reminders sent', page: Reminders },
   { id: 'reports', label: 'Monthly report', page: Reports },
+  { id: 'history', label: 'Past months', page: History },
   { id: 'people', label: 'People', page: People },
   { id: 'rules', label: 'Rules & calendars', page: Rules },
 ] as const;

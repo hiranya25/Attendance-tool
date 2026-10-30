@@ -1,4 +1,4 @@
-import type { Connections, Employee, Holiday, ImportRecord, MonthData, Office, Reference, Settings, Shift, TrendPoint, User } from '../types';
+import type { Connections, Employee, Holiday, ImportRecord, MonthData, MonthSummary, Office, Reference, Settings, Shift, TrendPoint, User } from '../types';
 
 export interface ImportResult {
   kind?: 'punch' | 'sheet' | 'team';
@@ -22,6 +22,7 @@ export interface AttendanceApi {
   getReference(): Promise<Reference>;
   getMonth(month: string): Promise<MonthData>;
   getTrend(): Promise<TrendPoint[]>;
+  getHistory(): Promise<MonthSummary[]>;
   connections(): Promise<Connections>;
   listImports(): Promise<ImportRecord[]>;
   getNotification(id: string): Promise<{ subject: string; to: string; at: string; sent: boolean; error: string | null; html: string }>;

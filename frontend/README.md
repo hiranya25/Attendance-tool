@@ -42,6 +42,7 @@ npm run dev:demo
 | Change log | Every change, with the reason and the source. Originals are kept |
 | Reminders sent | Messages to employees, HR and management |
 | Monthly report | Trends, repeat patterns, departments, and the summary that is emailed at month close |
+| Past months | Every month with data, newest first: present rate, issues, unexplained absences and extra lates per month, the files used, and every saved report version to download |
 | People | Employee list with join and leave dates |
 | Attendance files | Upload the punch system's monthly file, and see every file received |
 | Rules & calendars | Connections, shift times, thresholds, email confidence, reminders, month close, holiday calendars, user accounts. Saving re-checks every month |
