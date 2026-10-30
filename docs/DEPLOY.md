@@ -169,7 +169,7 @@ There is nothing to do except bring in the files. On **Attendance files**, uploa
 - Mumbai's monthly attendance sheet (first column "Date", one column per person, OK / L1 / A).
 - the team list, whenever it changes (NAME, MANAGER, Work Hours, LOCATION, email, role). People marked NA are not tracked.
 
-The tool recognises which file is which. New York has no attendance system: its leave and late arrivals come from emails to hr@amipi.com.
+The tool recognises which file is which. Earlier months can be uploaded the same way; every month is listed on **Past months**, with its saved reports. New York has no attendance system: its leave and late arrivals come from emails to hr@amipi.com.
 
 ## Updating to a new version
 
