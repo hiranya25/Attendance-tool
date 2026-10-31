@@ -15,19 +15,19 @@ export function Reminders() {
 
   return (
     <>
-      <PageHead title="Reminders sent" sub={`Every message the tool sent in ${fmtMonth(data.month)}, so problems get fixed during the month.`} />
+      <PageHead title="Emails sent" sub={`Every email the tool sent, or would have sent, for ${fmtMonth(data.month)}. By default only the month-end report goes out.`} />
       <div className="stats three">
         <div className="rule-card">
           <b>To employees</b>
-          <span>{s.remindersOn ? `${s.reminderAfterDays} working day after a missing punch or an unexplained absence, for days in the last ${s.reminderWindowDays} days. Needs the person's email on the People page.` : 'Turned off on the Rules page.'}</span>
+          <span>{s.remindersOn ? `${s.reminderAfterDays} working day after a missing punch or an unexplained absence, for days in the last ${s.reminderWindowDays} days. Needs the person's email on the People page.` : 'None. Attendance is tracked silently and reported at month end.'}</span>
         </div>
         <div className="rule-card">
           <b>To HR</b>
-          <span>{s.hrDigestOn ? `A daily summary at ${s.hrDigestTime} IST to ${s.hrEmail}` : 'No daily summary'}, plus alerts for long absences and likely device problems. For information only.</span>
+          <span>{s.hrDigestOn ? `A daily summary at ${s.hrDigestTime} IST to ${s.hrEmail}.` : 'No daily summary.'} {s.remindersOn ? 'Alerts for long absences and likely device problems.' : 'No alerts during the month.'}</span>
         </div>
         <div className="rule-card">
           <b>To management</b>
-          <span>{s.reportRecipients.length ? `The monthly Excel package on day ${s.closeDay} of the next month, to ${s.reportRecipients.join(', ')}.` : 'No recipients set yet. Add them on the Rules page.'}</span>
+          <span>{s.reportRecipients.length ? `The PDF report and attendance Excel on day ${s.closeDay} of the next month, to ${s.reportRecipients.join(', ')}.` : 'No recipients set yet. Add them on the Rules page.'}</span>
         </div>
       </div>
       <div className="chips" role="group" aria-label="Recipient">

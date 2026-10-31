@@ -367,3 +367,21 @@ span.avatar { cursor: default; }
 .me > div { min-width: 0; overflow-wrap: anywhere; }
 .me .role { display: block; margin-top: 6px; }
 .form.narrow { max-width: 420px; }
+
+/* Grouped tables (Issues, People) */
+tr.group td { background: var(--surface-2); padding-top: 10px; padding-bottom: 10px; }
+tr.group .caret { display: inline-block; width: 16px; color: var(--muted); }
+tr.group .sub { margin-left: 16px; }
+.count-pill { display: inline-block; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: var(--fs-xs); text-align: center; font-variant-numeric: tabular-nums; }
+table.stacked tr.group { padding: 0; }
+table.stacked tr.group td { padding: 10px 16px; }
+.date-range { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Horizontal bar list (Monthly report) */
+.hbars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.hbars li { display: grid; grid-template-columns: minmax(90px, 38%) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: var(--fs-sm); }
+.hb-label { overflow-wrap: anywhere; }
+.hb-track { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.hb-track i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+.hb-value { font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
+td.num.good { color: var(--ok); font-weight: 600; }

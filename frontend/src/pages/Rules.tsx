@@ -63,16 +63,20 @@ export function Rules() {
             </div>
           </Panel>
 
-          <Panel title="HR emails and reminders">
+          <Panel title="HR emails" note="Emails to hr@amipi.com are read and applied to attendance (leave, half days, late or early notes). Nothing is sent during the month unless you turn it on below; everything goes into the month-end report.">
             <div className="form">
-              <Field label="HR mailbox (gets alerts and the daily summary)"><input id="hr-email" type="email" value={s.hrEmail} onChange={(e) => set('hrEmail', e.target.value)} /></Field>
               <Num id="conf" label="Apply an email when match confidence is at least" unit="%" value={s.autoApplyConfidence} min={50} max={100} onChange={(v) => set('autoApplyConfidence', v)} />
-              <Field label="Remind employees about missing punches and absences">
-                <label className="switch" htmlFor="rem-on"><input id="rem-on" type="checkbox" checked={s.remindersOn} onChange={(e) => set('remindersOn', e.target.checked)} /> {s.remindersOn ? 'On' : 'Off'}</label>
+              <Field label="Emails during the month (reminders to employees, alerts to HR)">
+                <label className="switch" htmlFor="rem-on"><input id="rem-on" type="checkbox" checked={s.remindersOn} onChange={(e) => set('remindersOn', e.target.checked)} /> {s.remindersOn ? 'On' : 'Off: month-end report only'}</label>
               </Field>
-              <Num id="rem-days" label="Send the reminder after" unit="working days" value={s.reminderAfterDays} min={1} max={10} onChange={(v) => set('reminderAfterDays', v)} />
-              <Num id="rem-window" label="Only remind about days in the last" unit="days (older ones go in the report only)" value={s.reminderWindowDays} min={1} max={60} onChange={(v) => set('reminderWindowDays', v)} />
-              <Field label="HR daily summary">
+              {s.remindersOn && (
+                <>
+                  <Field label="HR mailbox (gets alerts and the daily summary)"><input id="hr-email" type="email" value={s.hrEmail} onChange={(e) => set('hrEmail', e.target.value)} /></Field>
+                  <Num id="rem-days" label="Send the reminder after" unit="working days" value={s.reminderAfterDays} min={1} max={10} onChange={(v) => set('reminderAfterDays', v)} />
+                  <Num id="rem-window" label="Only remind about days in the last" unit="days (older ones go in the report only)" value={s.reminderWindowDays} min={1} max={60} onChange={(v) => set('reminderWindowDays', v)} />
+                </>
+              )}
+              <Field label="HR daily summary email">
                 <span className="row-gap">
                   <label className="switch" htmlFor="digest-on"><input id="digest-on" type="checkbox" checked={s.hrDigestOn} onChange={(e) => set('hrDigestOn', e.target.checked)} /> {s.hrDigestOn ? 'On, at' : 'Off'}</label>
                   {s.hrDigestOn && <input id="digest" type="time" aria-label="Summary time" value={s.hrDigestTime} onChange={(e) => e.target.value && set('hrDigestTime', e.target.value)} />}
@@ -82,7 +86,7 @@ export function Rules() {
           </Panel>
         </div>
 
-        <Panel title="Month close and reports" note="The month closes by itself and the Excel package is saved here and emailed. If a newer file arrives later, a revised package goes out.">
+        <Panel title="Month close and reports" note="The month closes by itself. The PDF report (with charts and the comparison with the previous month) and the attendance Excel are saved here and emailed to the addresses below. If a newer file arrives later, a revised version goes out.">
           <div className="form wide-form">
             <Num id="close" label="Close the month on day" unit="of the next month, or when its file arrives if later" value={s.closeDay} min={1} max={28} onChange={(v) => set('closeDay', v)} />
             <Field label="Email the monthly package to (one address per line)">

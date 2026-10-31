@@ -26,7 +26,7 @@ const VIEWS = [
   { id: 'files', label: 'Attendance files', page: Files },
   { id: 'emails', label: 'HR emails', page: Emails },
   { id: 'changes', label: 'Change log', page: Changes },
-  { id: 'reminders', label: 'Reminders sent', page: Reminders },
+  { id: 'reminders', label: 'Emails sent', page: Reminders },
   { id: 'reports', label: 'Monthly report', page: Reports },
   { id: 'history', label: 'Past months', page: History },
   { id: 'people', label: 'People', page: People },

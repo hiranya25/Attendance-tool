@@ -46,6 +46,7 @@ export function httpApi(base: string): AttendanceApi {
     removeUser: (id) => call(`/users/${id}`, { method: 'DELETE' }),
     resetPassword: (id, password) => call(`/users/${id}/password`, put({ password })),
     exportUrl: (month, part) => `${root}/months/${month}/export?part=${part}`,
-    reportUrl: (id) => `${root}/reports/${id}/download`,
+    reportUrl: (id, format = 'xlsx') => `${root}/reports/${id}/download${format === 'pdf' ? '?format=pdf' : ''}`,
+    pdfUrl: (month) => `${root}/months/${month}/report.pdf`,
   };
 }

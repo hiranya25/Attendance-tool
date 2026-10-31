@@ -7,6 +7,7 @@ import type {
   ChangeEntry, ChangeSource, DayCode, DayRecord, Employee, HrEmail, Issue, IssueType, LeaveType, MonthData,
   Notification, Office, Settings, Severity, Shift, SourceHealth,
 } from '../../../shared/types.ts';
+import fs from 'node:fs';
 import { db } from '../db.ts';
 import { now, today } from '../config.ts';
 import * as R from '../repo.ts';
@@ -204,9 +205,11 @@ class Builder {
           const from = rec.code;
           rec.original ??= { code: from };
           rec.leaveType = leave;
-          if (from === 'HD') rec.note = `Half day, rest is ${leave.toLowerCase()}`;
+          // A half-day email turns an absent or empty day into a half day; the rest of the day is the leave.
+          const half = from === 'HD' || Boolean(Number(m.half_day));
+          if (half) { rec.code = 'HD'; rec.note = `Half day, rest is ${leave.toLowerCase()}`; }
           else rec.code = 'LV';
-          this.change(m.processed_at, emp.id, d, codeLabel(from), from === 'HD' ? `Half day + ${leave.toLowerCase()}` : leave, `Email "${m.subject}" from ${m.from_addr}`, 'HR email', base.id);
+          this.change(m.processed_at, emp.id, d, codeLabel(from), half ? `Half day + ${leave.toLowerCase()}` : leave, `Email "${m.subject}" from ${m.from_addr}`, 'HR email', base.id);
           changed++;
         }
         action = changed ? `Marked ${emp.name} as ${leave.toLowerCase()} on ${dayList}.` : `Noted ${emp.name}'s ${leave.toLowerCase()} for ${dayList}. Those days were not absent in the punch data, so nothing changed.`;
@@ -446,7 +449,7 @@ class Builder {
       month: this.month, closed: reports.length > 0,
       closesAt: reports.length ? reports[reports.length - 1].created_at : closesAt,
       reportsSentTo: reports.length ? JSON.parse(reports[0].sent_to) : [],
-      reports: reports.map((rp) => ({ id: Number(rp.id), version: Number(rp.version), createdAt: rp.created_at, note: rp.note, sentTo: JSON.parse(rp.sent_to) })),
+      reports: reports.map((rp) => ({ id: Number(rp.id), version: Number(rp.version), createdAt: rp.created_at, note: rp.note, sentTo: JSON.parse(rp.sent_to), hasPdf: fs.existsSync(String(rp.path).replace(/\.xlsx$/, '.pdf')) })),
     };
   }
 

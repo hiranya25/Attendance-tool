@@ -20,7 +20,7 @@ This creates `deploy/out/attendance-desk.zip`. It contains:
 | File | What it is |
 |---|---|
 | `app.cjs` | The website and its API |
-| `cron.cjs` | The automatic run (mailbox, reminders, summaries, month close) |
+| `cron.cjs` | The automatic run (reads HR emails, closes the month, emails the report) |
 | `cli.cjs` | Admin commands for the server's terminal |
 | `public/` | The screens |
 | `config.sample.json` | Settings template |
@@ -153,14 +153,14 @@ The AI only reads each email and reports who it is about, which days, what kind 
 ## 8. Before switching email on
 
 On the screens:
-- **People:** add each person's email address (needed for reminders) and joining dates.
+- **People:** add joining and leaving dates, and emails (they help match HR emails to the right person).
 - **Rules & calendars, Shift timings:** the times are estimated from September data. Check them with Jainam, correct them, and tick "Confirmed".
 - **Rules & calendars, Holiday calendars:** check the dates marked "Check date".
 - **Rules & calendars, Month close and reports:** add the people who should receive the monthly report.
 
-Use **Preview** on the Reminders page to see exactly what each email will say. Then set `"sendEmail": true` in `config.json` and restart the app.
+By default the tool sends **no emails during the month**: it only reads the emails sent to hr@amipi.com. At month end it emails the PDF report and the attendance Excel to the report recipients. Use **Preview** on the **Emails sent** page to see the report email. Then set `"sendEmail": true` in `config.json` and restart the app.
 
-To start with HR and report recipients only, turn **Remind employees** off on the Rules page first, and turn it on later. `docs/CHECKLISTS.md` has short lists to forward to each person involved.
+Reminders to employees and alerts to HR can be turned on later under **Rules & calendars → HR emails**. `docs/CHECKLISTS.md` has short lists to forward to each person involved.
 
 ## Everyday use
 
@@ -169,7 +169,7 @@ There is nothing to do except bring in the files. On **Attendance files**, uploa
 - Mumbai's monthly attendance sheet (first column "Date", one column per person, OK / L1 / A).
 - the team list, whenever it changes (NAME, MANAGER, Work Hours, LOCATION, email, role). People marked NA are not tracked.
 
-The tool recognises which file is which. Earlier months can be uploaded the same way; every month is listed on **Past months**, with its saved reports. New York has no attendance system: its leave and late arrivals come from emails to hr@amipi.com.
+The tool recognises which file is which. At month end it makes the PDF report (summary, comparison with the previous month, charts, each person's month) and the attendance Excel, saves both under **Monthly report**, and emails them to the report recipients. Earlier months can be uploaded the same way; every month is listed on **Past months**, with its saved reports. New York has no attendance system: its leave and late arrivals come from emails to hr@amipi.com.
 
 ## Updating to a new version
 

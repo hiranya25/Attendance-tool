@@ -43,5 +43,8 @@ export interface AttendanceApi {
 
   /** Link to an Excel download, or null when downloads come from the browser instead (demo). */
   exportUrl(month: string, part: 'all' | 'master' | 'issues'): string | null;
-  reportUrl(id: number): string | null;
+  /** A saved report version: the Excel workbook, or its PDF report. */
+  reportUrl(id: number, format?: 'xlsx' | 'pdf'): string | null;
+  /** The PDF report for a month as it stands now (not saved, not emailed). */
+  pdfUrl(month: string): string | null;
 }
