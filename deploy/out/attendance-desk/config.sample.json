@@ -1,0 +1,29 @@
+{
+  "appUrl": "https://attendance.example.com",
+  "timezone": "Asia/Kolkata",
+  "database": {
+    "client": "pg",
+    "host": "localhost",
+    "port": 5432,
+    "user": "CPANELUSER_attendance",
+    "password": "CHANGE_ME",
+    "database": "CPANELUSER_attendance"
+  },
+  "storageDir": "./storage",
+  "sessionSecret": "CHANGE_ME_TO_A_LONG_RANDOM_TEXT",
+  "microsoft": {
+    "tenantId": "",
+    "clientId": "",
+    "clientSecret": "",
+    "mailbox": "attendance@amipi.com",
+    "sender": "attendance@amipi.com",
+    "replyTo": "hr@amipi.com"
+  },
+  "ai": {
+    "provider": "nvidia",
+    "apiKey": "",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "baseUrl": "https://integrate.api.nvidia.com/v1"
+  },
+  "sendEmail": true
+}

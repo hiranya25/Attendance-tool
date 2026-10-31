@@ -1,0 +1,9 @@
+{
+  "name": "attendance-desk",
+  "private": true,
+  "description": "Attendance Desk. Everything is bundled: no npm install needed.",
+  "main": "app.cjs",
+  "engines": {
+    "node": ">=18.17"
+  }
+}
