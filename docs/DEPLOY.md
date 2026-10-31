@@ -9,10 +9,10 @@ The app is a Node.js app with a PostgreSQL database. Everything is bundled, so t
 
 ## 1. Build the upload package
 
-On any computer with Node.js 20 or newer, from the project folder, run:
+On any computer with Node.js 20 or newer (Windows, Mac or Linux), open a terminal (on Windows: PowerShell) in the project folder and run:
 
 ```bash
-bash deploy/build.sh
+node deploy/build.mjs
 ```
 
 This creates `deploy/out/attendance-desk.zip`. It contains:
@@ -173,7 +173,7 @@ The tool recognises which file is which. Earlier months can be uploaded the same
 
 ## Updating to a new version
 
-1. Run `bash deploy/build.sh` again.
+1. Run `node deploy/build.mjs` again.
 2. Upload and extract the new zip over the old files. `config.json` and `storage/` are not in the zip, so they are kept.
 3. Click **Restart** in Setup Node.js App.
 

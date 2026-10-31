@@ -25,7 +25,7 @@ Updated 29 Oct 2026. The tool runs by itself: no HR approvals anywhere. Every ch
 
 **Owner:** you, or whoever manages the InMotion account. I can guide you through each step.
 
-1. Run `bash deploy/build.sh` to make the upload zip.
+1. Run `node deploy/build.mjs` to make the upload zip.
 2. In cPanel: create the PostgreSQL database, the subdomain (for example attendance.amipi.com) and its SSL certificate.
 3. Upload the zip, fill in `config.json`, and start it with **Setup Node.js App**.
 4. Add the cron job that runs every 15 minutes.
