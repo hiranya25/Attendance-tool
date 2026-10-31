@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { CALENDARS, HOLIDAYS, OFFICES, RULES, SHIFTS } from './seed.ts';
 
-const VERSION = 3;
+const VERSION = 4;
 
 /** Creates the tables on first use and fills in the starting data. Safe to run on every start. */
 export async function ensureSchema(k: Knex): Promise<void> {
@@ -9,7 +9,8 @@ export async function ensureSchema(k: Knex): Promise<void> {
     await k.schema.createTable('state', (t) => { t.string('name', 64).primary(); t.text('value'); });
   }
   const row = await k('state').where({ name: 'schema_version' }).first();
-  if (Number(row?.value ?? 0) >= VERSION) return;
+  const from = Number(row?.value ?? 0);
+  if (from >= VERSION) return;
 
   const create = async (name: string, build: (t: Knex.CreateTableBuilder) => void) => {
     if (!(await k.schema.hasTable(name))) await k.schema.createTable(name, build);
@@ -96,6 +97,11 @@ export async function ensureSchema(k: Knex): Promise<void> {
   }
   if (!(await k('settings').where({ name: 'rules' }).first())) await k('settings').insert({ name: 'rules', value: JSON.stringify(RULES) });
   if (!(await k('settings').where({ name: 'offices' }).first())) await k('settings').insert({ name: 'offices', value: JSON.stringify(OFFICES) });
+  // Version 4: no emails during the month. HR emails are only read; the report goes out at month end.
+  if (from > 0 && from < 4) {
+    const rules = await k('settings').where({ name: 'rules' }).first();
+    if (rules) await k('settings').where({ name: 'rules' }).update({ value: JSON.stringify({ ...JSON.parse(rules.value), remindersOn: false, hrDigestOn: false }) });
+  }
   await k('state').where({ name: 'schema_version' }).delete();
   await k('state').insert({ name: 'schema_version', value: String(VERSION) });
 }

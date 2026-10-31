@@ -13,6 +13,8 @@ import { attachments, graphConfigured, messagesSince } from './mail/graph.ts';
 import { esc, layout, send } from './mail/mailer.ts';
 import { AiBusyError, aiConfigured, aiName, readEmail } from './ai/emailReader.ts';
 import { writeWorkbook } from './reports/excel.ts';
+import { writePdf } from './reports/pdf.ts';
+import { monthFigures } from '../../shared/figures.ts';
 import { needsAttention, summaryLines } from './reports/summary.ts';
 
 export async function runAll(log: (m: string) => void = () => {}): Promise<string[]> {
@@ -130,10 +132,14 @@ async function readWithAi(row: { from_addr: string; received_at: string; subject
   }
 }
 
-/** Reminders to employees, and alerts to HR for long absences and likely device problems. */
+/**
+ * Reminders to employees, and alerts to HR for long absences and likely device problems.
+ * Off by default: everything is tracked silently and reported at month end.
+ */
 export async function sendReminders(): Promise<string> {
   const k = await db();
   const r = await R.getRules();
+  if (!r.remindersOn) return 'Turned off (everything is reported at month end).';
   const day = today();
   const emps = Object.fromEntries((await R.getEmployees()).map((e) => [e.id, e]));
   const officeList = await R.getOffices();
@@ -163,7 +169,7 @@ export async function sendReminders(): Promise<string> {
         count++;
         continue;
       }
-      if (!r.remindersOn || !NOTIFY_TYPES.includes(x.type) || !e.email) continue;
+      if (!NOTIFY_TYPES.includes(x.type) || !e.email) continue;
       if (x.date < D.addDays(day, -r.reminderWindowDays)) continue;
       if (workingDayAfter(x.date, r.reminderAfterDays, R.officeOf(officeList, e.officeId).weeklyOff ?? r.weeklyOff) > day) continue;
       const ask = x.type === 'Unexplained absence' ? 'please reply to this email with the reason for your absence' : 'please reply to this email with your actual time';
@@ -223,7 +229,21 @@ export async function closeMonths(): Promise<string> {
   return done.length ? `Closed ${done.join(', ')}.` : 'Nothing to close.';
 }
 
-/** Build the Excel package, keep it on the server, and email it to the report recipients. */
+/** The PDF report for a month, with the previous month and up to six months of history for comparison. */
+export async function pdfFor(month: string, version: number, data?: Awaited<ReturnType<typeof buildMonth>>) {
+  const [d, employees, offices] = await Promise.all([data ?? buildMonth(month), R.getEmployees(), R.getOffices()]);
+  const prevKey = D.prevMonth(month);
+  const prev = (await R.latestImport(prevKey)) ? await buildMonth(prevKey) : null;
+  const months = (await R.getMonths()).filter((m) => m <= month).slice(-6);
+  const history: { month: string; figures: ReturnType<typeof monthFigures> }[] = [];
+  for (const m of months) {
+    if (m !== month && !(await R.latestImport(m))) continue;
+    history.push({ month: m, figures: monthFigures(m === month ? d : m === prevKey && prev ? prev : await buildMonth(m)) });
+  }
+  return writePdf({ data: d, prev, history, employees, offices, version });
+}
+
+/** Build the PDF report and the attendance Excel, keep them on the server, and email them to the report recipients. */
 export async function buildPackage(month: string, note: string) {
   const k = await db();
   const r = await R.getRules();
@@ -232,11 +252,17 @@ export async function buildPackage(month: string, note: string) {
   const name = `Attendance-${month}-v${version}.xlsx`;
   const file = path.join(storage(`reports/${month}`), name);
   fs.writeFileSync(file, await writeWorkbook(data, employees, offices));
+  const pdfName = name.replace(/\.xlsx$/, '.pdf');
+  const pdfFile = file.replace(/\.xlsx$/, '.pdf');
+  fs.writeFileSync(pdfFile, await pdfFor(month, version, data));
   const id = await insertId(k, 'reports', { month, version, path: file, created_at: now(), sent_to: JSON.stringify(r.reportRecipients), note });
   const lines = summaryLines(data, Object.fromEntries(employees.map((e) => [e.id, e])));
-  const subject = `Attendance ${D.monthName(month)}${version > 1 ? ` (revised, version ${version})` : ''}`;
-  const html = layout(subject, `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul><p>The full workbook is attached: summary, master sheet, daily detail, issues, HR emails and change log. It is also saved in Attendance Desk under Monthly report.</p>`);
-  if (r.reportRecipients.length) await send({ to: r.reportRecipients, audience: 'Management', month, subject, html, files: [{ name, path: file }] });
+  const subject = `Attendance report ${D.monthName(month)}${version > 1 ? ` (revised, version ${version})` : ''}`;
+  const html = layout(subject, `<ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>`
+    + '<p>Attached:</p><ul><li><b>Monthly report (PDF)</b>: headline figures, comparison with the previous month, charts, each person\'s month and repeat patterns.</li>'
+    + '<li><b>Attendance workbook (Excel)</b>: summary, master sheet, daily detail, issues, HR emails and change log.</li></ul>'
+    + '<p>Both are also saved in Attendance Desk under Monthly report.</p>');
+  if (r.reportRecipients.length) await send({ to: r.reportRecipients, audience: 'Management', month, subject, html, files: [{ name: pdfName, path: pdfFile }, { name, path: file }] });
   return { id, version, file };
 }
 

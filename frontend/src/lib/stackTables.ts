@@ -22,8 +22,13 @@ function fit(wrap: HTMLElement) {
   if (!table) return;
   const was = table.classList.contains('stacked');
   table.classList.remove('stacked');
+  // Tables fill their panel, so measure the narrowest the table can be instead of its current width.
+  const width = table.style.width;
+  table.style.width = 'min-content';
+  const needed = table.offsetWidth;
+  table.style.width = width;
   // A few pixels of slack stop it flipping back and forth when a page scrollbar appears or goes.
-  const tooWide = table.scrollWidth > wrap.clientWidth - (was ? 8 : 0);
+  const tooWide = needed > wrap.clientWidth - (was ? 8 : 0);
   table.classList.toggle('stacked', tooWide);
 }
 

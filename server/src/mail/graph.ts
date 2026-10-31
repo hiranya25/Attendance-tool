@@ -79,7 +79,7 @@ export async function sendMail(to: string[], subject: string, html: string, file
       ...(config().microsoft.replyTo ? { replyTo: [{ emailAddress: { address: config().microsoft.replyTo } }] } : {}),
       attachments: files.map((f) => ({
         '@odata.type': '#microsoft.graph.fileAttachment', name: f.name,
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', contentBytes: fs.readFileSync(f.path).toString('base64'),
+        contentType: f.name.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', contentBytes: fs.readFileSync(f.path).toString('base64'),
       })),
     },
   });

@@ -151,9 +151,9 @@ Open **http://localhost:5173**.
 3. Look through **Overview**, **Attendance** (click any day), **Issues** and **People**.
 4. On **People**, click a person, then **Edit details**. Add an email or a leaving date, and watch their issues change.
 5. On **Rules & calendars**, change a shift time or the late grace period and save. Every month is checked again straight away, and the change appears in **Change log**.
-6. On **Monthly report**, click **Download full workbook** to get the Excel file.
+6. On **Monthly report**, click **PDF report** to see the month-end report (charts, comparison with the previous month, each person), or **Full workbook** for the Excel file.
 7. On **Past months**, see every month with data side by side, open any earlier month, and download its saved reports. Upload an older month's file to add it.
-8. On **Rules & calendars**, click **Run checks now**. This is what the server does every 15 minutes: it reads the mailbox, sends reminders and closes months. Locally, Outlook and Claude show "Not set up" and nothing is emailed. Every message the tool would send is listed on **Reminders sent**.
+8. On **Rules & calendars**, click **Run checks now**. This is what the server does every 15 minutes: it reads the mailbox and closes months (reminders only if you turn them on). Locally, Outlook and the AI show "Not set up" and nothing is emailed. Every message the tool would send is listed on **Emails sent**.
 
 ### Optional: test HR email reading on your computer
 

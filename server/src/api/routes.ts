@@ -9,7 +9,7 @@ import { buildMonth } from '../engine/monthBuilder.ts';
 import { importFile } from '../import/importer.ts';
 import { writeWorkbook, type ExcelPart } from '../reports/excel.ts';
 import { isUnexplained, needsAttention, totals } from '../reports/summary.ts';
-import { buildPackage, runAll } from '../jobs.ts';
+import { buildPackage, pdfFor, runAll } from '../jobs.ts';
 import { graphConfigured } from '../mail/graph.ts';
 import { aiConfigured, aiName } from '../ai/emailReader.ts';
 import { logError } from '../log.ts';
@@ -98,6 +98,12 @@ export function apiRouter(): Router {
     }
     return out;
   }));
+  // The PDF report for a month as it stands now, without closing the month or emailing anyone.
+  api.get('/months/:month/report.pdf', user, h(async (req, res) => {
+    const month = String(req.params.month);
+    if (!/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, 'Month must look like 2026-10.');
+    sendFile(res, await pdfFor(month, 0), `Attendance-${month}-draft.pdf`);
+  }));
   api.get('/months/:month/export', user, h(async (req, res) => {
     const m = month(req);
     const part = (['all', 'master', 'issues'].includes(String(req.query.part)) ? req.query.part : 'all') as ExcelPart;
@@ -106,8 +112,10 @@ export function apiRouter(): Router {
   }));
   api.get('/reports/:id/download', user, h(async (req, res) => {
     const rp = await (await db())('reports').where({ id: Number(req.params.id) }).first();
-    if (!rp || !fs.existsSync(rp.path)) throw new HttpError(404, 'That report file is no longer on the server.');
-    sendFile(res, fs.readFileSync(rp.path), `Attendance-${rp.month}-v${rp.version}.xlsx`);
+    const pdf = req.query.format === 'pdf';
+    const file = pdf ? String(rp?.path ?? '').replace(/\.xlsx$/, '.pdf') : rp?.path;
+    if (!rp || !fs.existsSync(file)) throw new HttpError(404, pdf ? 'This version has no PDF. Versions made before PDF reports existed are Excel only.' : 'That report file is no longer on the server.');
+    sendFile(res, fs.readFileSync(file), `Attendance-${rp.month}-v${rp.version}.${pdf ? 'pdf' : 'xlsx'}`);
   }));
   api.get('/imports', user, h(async () => (await (await db())('imports').orderBy('id', 'desc').limit(100)).map((i) => ({
     id: Number(i.id), scope: i.scope || 'punch', month: i.month, fileName: i.file_name, source: i.source, importedAt: i.imported_at, importedBy: i.imported_by, people: Number(i.people), days: Number(i.days),
@@ -269,7 +277,7 @@ function month(req: Request): string {
 }
 
 function sendFile(res: Response, buf: Buffer, name: string) {
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Type', name.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
   res.setHeader('Cache-Control', 'no-store');
   res.end(buf);

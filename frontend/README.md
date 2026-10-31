@@ -37,13 +37,13 @@ npm run dev:demo
 |---|---|
 | Overview | What needs attention, what the tool did, month progress, offices, data sources |
 | Attendance | Master grid for all offices. Click a day for times, issues and change history |
-| Issues | Everything the daily check found and what happened to each item |
+| Issues | Everything the daily check found and what happened to each item. Filter by type, office, priority, manager and dates; group by issue type, person or office |
 | HR emails | Each email, how the tool read it, and what it changed |
 | Change log | Every change, with the reason and the source. Originals are kept |
-| Reminders sent | Messages to employees, HR and management |
-| Monthly report | Trends, repeat patterns, departments, and the summary that is emailed at month close |
+| Emails sent | Every email the tool sent or would send. By default only the month-end report |
+| Monthly report | The selected month only: headline figures, comparison with the previous month, items by type, present rate by office, each person's month, repeat patterns, departments. PDF report and Excel downloads |
 | Past months | Every month with data, newest first: present rate, issues, unexplained absences and extra lates per month, the files used, and every saved report version to download |
-| People | Employee list with join and leave dates |
+| People | Employee list with join and leave dates. Filter by office, manager, status, shift, holiday calendar, or needs attention |
 | Attendance files | Upload the punch system's monthly file, and see every file received |
 | Rules & calendars | Connections, shift times, thresholds, email confidence, reminders, month close, holiday calendars, user accounts. Saving re-checks every month |
 | Settings | Your account, light or dark look, change your password, sign out. Open it from the round badge with your initials (top right) |

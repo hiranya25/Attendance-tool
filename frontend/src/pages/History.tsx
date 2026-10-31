@@ -71,9 +71,9 @@ export function History() {
                         {r.reports.length ? (
                           <div className="row-gap">
                             {r.reports.map((rp) => (
-                              <button key={rp.id} className="btn sm" title={`${rp.note}, ${fmtWhen(rp.createdAt)}`}
-                                onClick={() => (usingSampleData ? toast('Saved reports download on the real server.') : download(api.reportUrl(rp.id), '', () => []))}>
-                                Version {rp.version}
+                              <button key={rp.id} className="btn sm" title={`${rp.note}, ${fmtWhen(rp.createdAt)}. ${rp.hasPdf ? 'PDF report' : 'Excel workbook'}`}
+                                onClick={() => (usingSampleData ? toast('Saved reports download on the real server.') : download(api.reportUrl(rp.id, rp.hasPdf ? 'pdf' : 'xlsx'), '', () => []))}>
+                                Version {rp.version}{rp.hasPdf ? ' PDF' : ''}
                               </button>
                             ))}
                           </div>

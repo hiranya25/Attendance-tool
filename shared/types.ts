@@ -210,6 +210,8 @@ export interface ReportFile {
   createdAt: string;
   note: string;
   sentTo: string[];
+  /** Versions made before PDF reports existed have only the Excel workbook. */
+  hasPdf?: boolean;
 }
 
 export interface MonthClose {

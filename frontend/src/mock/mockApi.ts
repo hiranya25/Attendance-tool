@@ -61,7 +61,7 @@ export const mockApi: AttendanceApi = {
       needAttention: d.issues.filter((x) => ['open', 'reminded', 'unclear'].includes(x.state)).length,
       unexplained: d.issues.filter(isUnexplained).length, latesBeyond: d.issues.filter((x) => x.type === 'Late arrival' && x.state === 'open').length,
       files: [{ fileName: `monthdatewiseperformance-${m}.xls`, scope: 'punch', importedAt: `${m}-28T10:00` }],
-      reports: d.close.closed ? [{ id: 0, version: 1, createdAt: d.close.closesAt, note: 'Month closed', sentTo: d.close.reportsSentTo }] : [],
+      reports: d.close.closed ? [{ id: 0, version: 1, createdAt: d.close.closesAt, note: 'Month closed', sentTo: d.close.reportsSentTo, hasPdf: true }] : [],
     };
   })),
   connections: () => wait({ microsoft: false, ai: false, aiName: 'NVIDIA nvidia/nemotron-3-ultra-550b-a55b', sendEmail: false, mailbox: 'hr@amipi.com', lastRun: null, lastRunLog: ['This is the demo with sample data. Nothing is connected.'] }),
@@ -122,6 +122,7 @@ export const mockApi: AttendanceApi = {
   resetPassword: async () => { throw new Error('Passwords can only be set on the real server.'); },
   exportUrl: () => null,
   reportUrl: () => null,
+  pdfUrl: () => null,
 };
 
 export function resetDemo() {
