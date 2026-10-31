@@ -31,7 +31,7 @@ Open the address Vite prints. `/api` is passed to this server on port 3000.
 | `npm run build` | Type-checks, then bundles `dist/app.cjs`, `dist/cron.cjs`, `dist/cli.cjs` (no `node_modules` needed on the server) |
 | `npm run typecheck` | Type-check only |
 
-To deploy, use `bash ../deploy/build.sh` and follow `../docs/DEPLOY.md`.
+To deploy, use `node ../deploy/build.mjs` and follow `../docs/DEPLOY.md`.
 
 ## How it is organised
 
